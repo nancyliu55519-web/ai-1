@@ -863,9 +863,9 @@ const DESIGN_CSS = `
 .bubble.bot{align-self:flex-start;align-items:flex-start}
 .bubble .bot-name{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--gold-txt);margin:0 0 5px 4px}
 .bubble-body{padding:13px 17px;border-radius:16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:break-word}
-.bubble.me .bubble-body{background:var(--ink);color:#fff;border-bottom-right-radius:5px}
-.bubble.bot .bubble-body{background:var(--card);border:1px solid var(--line2);color:var(--ink);border-bottom-left-radius:5px}
-.bubble-body.typing{color:var(--ink-sub);font-style:normal}
+.bubble.me .bubble-body{background:#fff;color:var(--ink);border:1px solid var(--line2);border-bottom-right-radius:5px}
+.bubble.bot .bubble-body{background:var(--ink);color:#F5EFE3;border-bottom-left-radius:5px}
+.bubble-body.typing{color:#C9B896;font-style:normal}
 .chat-input{display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 10px 10px 16px;box-shadow:0 6px 24px rgba(58,42,26,.10)}
 .chat-box{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15px;line-height:1.6;color:var(--ink);resize:none;max-height:140px}
 .send-btn{flex:0 0 auto;background:var(--ink);color:#fff;border:0;border-radius:10px;padding:11px 20px;font-size:14px;cursor:pointer;transition:opacity .18s}
@@ -1084,6 +1084,9 @@ function AppInner() {
       setPhase("home");
     } else if (NEEDS_SETUP[id]) {
       setPhase("setup"); // 先填资料/选项
+    } else if (id === "qimen") {
+      // 奇门：不立即起局，先进对话，等用户发第一句话时按那一刻的时间起盘
+      setPhase("chat");
     } else {
       startCast(id, {});
     }
@@ -1159,8 +1162,11 @@ function AppInner() {
     const ctx = buildCastContext(id, extra);
     setCastContext(ctx);
     setCastInfo(cast);
-    setMessages([]);
-    setPhase("chat");
+    if (!opts.keepMessages) {
+      setMessages([]);
+      setPhase("chat");
+    }
+    return ctx;
   }
 
   // 提交 setup（八字/小六壬）资料
@@ -1192,6 +1198,12 @@ function AppInner() {
     setError("");
     setInput("");
 
+    // 奇门遁甲：如果还没起盘（进页面没自动起），现在按当下时间起盘
+    let effectiveContext = castContext;
+    if (selected === "qimen" && !castContext) {
+      effectiveContext = startCast("qimen", { keepMessages: true });
+    }
+
     const nextMessages = [...messages, { role: "user", content: text }];
     setMessages(nextMessages);
     setLoading(true);
@@ -1201,7 +1213,7 @@ function AppInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: CHAT_STYLE + "\n\n" + castContext,
+          system: CHAT_STYLE + "\n\n" + effectiveContext,
           messages: nextMessages,
         }),
       });
@@ -1473,7 +1485,7 @@ function AppInner() {
             {/* 对话气泡区 */}
             <div className="chat">
               {messages.length === 0 && !loading && (
-                <div className="chat-hint">局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。</div>
+                <div className="chat-hint">{selected === "qimen" ? "直接把想问的事说出来——你问的这一刻，会按当下的时间起盘，然后据此为你解读。" : "局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。"}</div>
               )}
               {messages.map((m, i) => (
                 <div key={i} className={"bubble " + (m.role === "user" ? "me" : "bot")}>
