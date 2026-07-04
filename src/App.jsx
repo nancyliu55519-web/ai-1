@@ -944,12 +944,21 @@ const DESIGN_CSS = `
   .fgrid{grid-template-columns:1fr;gap:18px}
 }
 @media(max-width:520px){
-  .wrap{padding:0 16px 30px}
+  .wrap{padding:0 14px 30px}
   .sys-grid{grid-template-columns:1fr}
-  .frow,.spread{grid-template-columns:1fr}
-  .datarow{grid-template-columns:80px 1fr;gap:10px}
-  .result,.form-card{padding:26px 22px}
+  .frow{grid-template-columns:1fr}
+  .datarow{grid-template-columns:76px 1fr;gap:10px}
+  .result,.form-card{padding:22px 18px}
+  .hero{padding:28px 20px 26px}
+  .castbar{padding:18px 18px}
+  .runbar{flex-wrap:wrap;gap:6px}
+  .hmeta{min-width:0}
+  h1{font-size:40px !important;word-break:break-word}
+  .spread{flex-wrap:wrap}
+  .spread button{flex:1 1 auto}
 }
+.page,.wrap,.hero,.section,.castbar,.form-card,.result,.chat,.chat-input,.bubble{max-width:100%;overflow-wrap:break-word}
+.datarow .dv{overflow-wrap:break-word;min-width:0}
 `;
 
 function Kicker({ code, label, onDark }) {
@@ -1591,4 +1600,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
