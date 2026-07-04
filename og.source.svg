@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <rect width="1200" height="1200" fill="#EAE2D3"/>
+  <g transform="translate(0,285)">
+    <rect x="34" y="14" width="1132" height="602" rx="18" fill="#241C12"/>
+    <rect x="90" y="86" width="40" height="3" fill="#D8B878"/>
+    <text x="146" y="94" font-family="'Menlo','Courier New',monospace" font-size="22" letter-spacing="4" fill="#D8B878">CODEX · 六体通书 · 起局 &amp; 解读</text>
+    <text x="86" y="278" font-family="'Songti SC','STSong','Noto Serif CJK SC',serif" font-weight="700" font-size="132" letter-spacing="10" fill="#FBF3E2">富甲天下</text>
+    <text x="92" y="364" font-family="'Songti SC','STSong',serif" font-size="31" letter-spacing="2" fill="#E9E1CC">小六壬 · 八字 · 奇门遁甲 · 梅花易数 · 六爻 · 塔罗</text>
+    <text x="92" y="426" font-family="'Menlo','Courier New',monospace" font-size="24" letter-spacing="3" fill="#7FC79B">AI 多体系术数问答 · 算法精确起局</text>
+    <line x1="92" y1="500" x2="740" y2="500" stroke="#B8924A" stroke-opacity="0.3" stroke-width="1"/>
+    <text x="92" y="540" font-family="'Menlo','Courier New',monospace" font-size="20" letter-spacing="3" fill="#C9A35E">06 体系 · DETERMINISTIC · WB-2026</text>
+    <g transform="translate(975,300)">
+      <circle r="150" fill="none" stroke="#D8B878" stroke-opacity="0.3" stroke-width="1.5"/>
+      <circle r="116" fill="none" stroke="#D8B878" stroke-opacity="0.18" stroke-width="1.5"/>
+      <g font-family="serif" font-size="26" fill="#D8B878" text-anchor="middle">
+        <text x="0" y="-125">☰</text><text x="95" y="-88">☴</text><text x="133" y="9">☵</text><text x="95" y="97">☶</text>
+        <text x="0" y="142">☷</text><text x="-95" y="97">☳</text><text x="-133" y="9">☲</text><text x="-95" y="-88">☱</text>
+      </g>
+      <circle r="52" fill="#EAD9B5"/>
+      <path d="M0,-52 A52,52 0 0 1 0,52 A26,26 0 0 1 0,0 A26,26 0 0 0 0,-52 Z" fill="#2a2013"/>
+      <circle cx="0" cy="-26" r="8.5" fill="#2a2013"/>
+      <circle cx="0" cy="26" r="8.5" fill="#EAD9B5"/>
+      <circle r="52" fill="none" stroke="#D8B878" stroke-opacity="0.5" stroke-width="1.5"/>
+    </g>
+    <g transform="translate(1060,540)">
+      <rect x="-34" y="-34" width="68" height="68" rx="6" fill="#B0463A"/>
+      <text x="0" y="-2" font-family="'Songti SC','STSong',serif" font-weight="700" font-size="26" fill="#F7EDE4" text-anchor="middle">天</text>
+      <text x="0" y="26" font-family="'Songti SC','STSong',serif" font-weight="700" font-size="26" fill="#F7EDE4" text-anchor="middle">机</text>
+    </g>
+  </g>
+</svg>

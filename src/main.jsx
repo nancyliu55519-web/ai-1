@@ -1,0 +1,10 @@
+import React from "react";
+// 六体系起局/排盘均由 App 内的确定性算法计算，AI 仅作解读
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
