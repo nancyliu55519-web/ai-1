@@ -545,8 +545,8 @@ function drawTarot(count) {
 /* ---------------- 组装提示词 ---------------- */
 
 function buildPrompt(systemId, question, extra) {
-  const header = `你是一位造诣深厚、行文克制的传统术数执业者。用户的提问："${question || "（未特别说明，请给出整体运势解读）"}"\n\n`;
-  const footer = `\n\n要求：\n- 用中文作答，语气沉稳、专业、不夸张，不使用"绝对""一定"等断言词。\n- 先给出简要的起局/排盘要点，再给出解读，最后给出一条实际可执行的建议。\n- 全文控制在 400-600 字。\n- 不涉及赌博、投机下注类的直接指向性判断；如问题涉及此类，请转向理性提示。`;
+  const header = `你是一位懂传统术数、但特别会跟普通人聊天的解读师。用户的提问："${question || "（没特别说，请给个整体运势的解读）"}"\n\n`;
+  const footer = `\n\n请按下面的方式回答：\n- 用大白话、口语化的中文，像朋友聊天一样，别端着，别掉书袋。\n- 专业术语（比如某个宫、某个卦、某颗星）第一次出现时，一定要顺带用一句话解释它是什么意思、代表什么，别只甩术语让人一头雾水。\n- 结构上：先简单说一句这次起出来的是什么局面，然后重点讲"这对你意味着什么"，最后给一两条具体能上手做的建议。\n- 多讲人话、讲生活里的场景，少用"吉凶祸福""气运流转"这类空泛的古文腔。\n- 语气温和、给人鼓励，不用"绝对""一定""必然"这种把话说死的词。\n- 全文控制在 400-600 字。\n- 不碰赌博、投机下注这类给明确下注指向的内容；遇到这类问题，温和地把话题引导回理性。`;
 
   switch (systemId) {
     case "liuren":
@@ -670,8 +670,8 @@ const DESIGN_CSS = `
 .sec-head{margin:0 0 22px}
 .sec-head h2{font-family:var(--serif);font-weight:700;color:var(--ink);font-size:26px;line-height:1.25;margin:13px 0 6px;letter-spacing:.02em}
 .sec-head .lead{font-size:13.5px;color:var(--ink-sub);max-width:660px;margin:0}
-.sys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line2);border:1px solid var(--line2);border-radius:8px;overflow:hidden}
-.sys{background:var(--card);padding:22px 20px;position:relative;cursor:pointer;transition:background .18s;min-height:180px;display:flex;flex-direction:column;text-align:left;border:0;font:inherit;color:inherit;width:100%}
+.sys-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line2);border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+.sys{background:var(--card);padding:22px 20px;position:relative;cursor:pointer;transition:background .18s;min-height:120px;display:flex;flex-direction:column;text-align:left;border:0;font:inherit;color:inherit;width:100%}
 .sys:hover{background:var(--card3)}
 .sys .no{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--mono-label)}
 .sys .sym{position:absolute;top:16px;right:20px;font-family:var(--serif);font-weight:900;font-size:34px;color:var(--gold-lt);opacity:.55;line-height:1}
@@ -680,6 +680,9 @@ const DESIGN_CSS = `
 .sys .ds{font-size:12px;color:var(--ink-sub);margin-top:10px;line-height:1.7;flex:1}
 .sys .pick{margin-top:12px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mono-label)}
 .sys.sel{background:var(--coffee)}
+.backbar{padding:24px 0 0}
+.backbtn{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-sub);cursor:pointer;transition:background .18s}
+.backbtn:hover{background:var(--card3);color:var(--ink)}
 .sys.sel .no{color:var(--gold-lt2)} .sys.sel .sym{color:var(--gold-lt);opacity:.85} .sys.sel .nm{color:#FBF3E2} .sys.sel .st{color:var(--gold-lt)} .sys.sel .ds{color:var(--cream-dim)}
 .chip-sel{display:inline-block;align-self:flex-start;background:var(--jade);color:#fff;font-family:var(--mono);font-size:10px;border-radius:3px;padding:2px 8px;letter-spacing:.06em;margin-top:12px}
 .intro{font-size:13px;line-height:1.85;color:var(--ink-sub);border-left:3px solid var(--gold);background:var(--gold-bg);padding:12px 16px;border-radius:0 6px 6px 0;margin:0 0 22px}
@@ -1043,6 +1046,9 @@ export default function App() {
       <div className="wrap">
         <RunBar pos="top" />
 
+        {/* 首页：未选体系时显示 HERO + 列表 */}
+        {!selected && (
+        <>
         {/* HERO */}
         <header className="hero">
           <div className="hero-grid">
@@ -1057,7 +1063,7 @@ export default function App() {
                 <div className="hmeta"><div className="k">Systems</div><div className="v">06 体系</div></div>
                 <div className="hmeta"><div className="k">Engine</div><div className="v">Deterministic</div></div>
                 <div className="hmeta"><div className="k">Edition</div><div className="v">WB-2026</div></div>
-                <div className="hmeta"><div className="k">Active</div><div className="v">{currentSystem ? `${currentSystem.name} · ${LATIN[selected]}` : "择体 · SELECT"}</div></div>
+                <div className="hmeta"><div className="k">Active</div><div className="v">择体 · SELECT</div></div>
               </div>
             </div>
             <div className="hero-wheel"><BaguaWheel /></div>
@@ -1073,20 +1079,27 @@ export default function App() {
           </div>
           <div className="sys-grid">
             {SYSTEMS.map((s, i) => {
-              const sel = selected === s.id;
               return (
-                <button key={s.id} className={"sys" + (sel ? " sel" : "")} onClick={() => resetForm(s.id)}>
+                <button key={s.id} className="sys" onClick={() => resetForm(s.id)}>
                   <div className="no">{String(i + 1).padStart(2, "0")}</div>
                   <div className="sym">{s.glyph}</div>
                   <div className="nm">{s.name}</div>
                   <div className="st">{s.sub}</div>
-                  <div className="ds">{SYSTEM_INTRO[s.id]}</div>
-                  {sel ? <span className="chip-sel">ACTIVE · 已选</span> : <div className="pick">点选起局 →</div>}
+                  <div className="pick">点选起局 →</div>
                 </button>
               );
             })}
           </div>
         </section>
+        </>
+        )}
+
+        {/* 详情页：选中体系后显示返回按钮 */}
+        {selected && (
+          <div className="backbar">
+            <button className="backbtn" onClick={() => resetForm(null)}>← 返回 · 重新择体</button>
+          </div>
+        )}
 
         {/* CHAPTER 02 · 起局 */}
         {selected && (
@@ -1202,7 +1215,8 @@ export default function App() {
           </section>
         )}
 
-        {/* APPENDIX · 关于本站 */}
+        {/* APPENDIX · 关于本站（仅首页显示） */}
+        {!selected && (
         <section className="section">
           <div className="sec-head"><Kicker code="APPENDIX" label="关于本站 · 使用说明" /></div>
           <details className="acc">
@@ -1227,6 +1241,7 @@ export default function App() {
             </div>
           </details>
         </section>
+        )}
 
         <RunBar pos="bot" />
         <p className="foot-note">术数推演仅供参考与自省，不构成对具体决策（含投资、医疗、法律等）的建议。</p>
