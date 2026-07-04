@@ -1,11 +1,20 @@
-import React from "react";
-// 六体系起局/排盘均由 App 内的确定性算法计算，AI 仅作解读
-import ReactDOM from "react-dom/client";
-import App from "./App.jsx";
-
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-
+{
+  "name": "ai-divination-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lunar-javascript": "^1.6.12",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
+  }
+}
