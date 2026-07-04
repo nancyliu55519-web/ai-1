@@ -733,7 +733,7 @@ function buildPrompt(systemId, question, extra) {
 /* ---------------- 对话式：起局背景 + 聊天风格 ---------------- */
 
 // 聊天版的"人设 + 风格"系统提示（作为 system 传给模型，全程生效）
-const CHAT_STYLE = `你是「小卜」，一位懂传统术数、又特别会跟普通人聊天的解读师。你的说话风格：
+const CHAT_STYLE = `你是一位懂传统术数、又特别会跟普通人聊天的解读师。不要给自己起名字、也不要自称任何称号，就自然地跟对方对话即可。你的说话风格：
 - 用大白话、口语化中文，像微信上跟朋友聊天一样，别端着、别掉书袋。
 - 每次回答简短一些（一般 3~6 句话），这是连续对话，不用一次把话说尽，用户会追问。
 - 出现专业术语（某个宫、某个卦、某颗星、某个门）时，顺带用半句话解释它是什么、代表什么，别只甩术语。
@@ -1489,13 +1489,11 @@ function AppInner() {
               )}
               {messages.map((m, i) => (
                 <div key={i} className={"bubble " + (m.role === "user" ? "me" : "bot")}>
-                  {m.role === "assistant" && <div className="bot-name">小卜</div>}
                   <div className="bubble-body">{m.content}</div>
                 </div>
               ))}
               {loading && (
                 <div className="bubble bot">
-                  <div className="bot-name">小卜</div>
                   <div className="bubble-body typing">正在理清局势…</div>
                 </div>
               )}
@@ -1593,3 +1591,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
