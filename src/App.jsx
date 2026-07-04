@@ -1,69 +1,3 @@
-import React, { useState, useRef } from "react";
-
-/* ---------------- 数据配置 ---------------- */
-
-const SYSTEMS = [
-  { id: "liuren", name: "小六壬", sub: "掐指速断", glyph: "六" },
-  { id: "bazi", name: "八字", sub: "命理推演", glyph: "命" },
-  { id: "qimen", name: "奇门遁甲", sub: "时空布局", glyph: "奇" },
-  { id: "meihua", name: "梅花易数", sub: "数理起卦", glyph: "梅" },
-  { id: "liuyao", name: "六爻", sub: "摇钱成卦", glyph: "爻" },
-  { id: "tarot", name: "塔罗", sub: "抽牌问心", glyph: "塔" },
-];
-
-// 各体系简介（选中时展示，帮助用户理解其源流与所长）
-const SYSTEM_INTRO = {
-  liuren:
-    "小六壬相传为诸葛武侯所传，以「大安、留连、速喜、赤口、小吉、空亡」六神循环，用农历月、日、时辰三步掐指定局。长于对眼前小事、失物、行人、约见等即时之问速断吉凶。",
-  bazi:
-    "八字（四柱）以出生的年、月、日、时排出天干地支八字，以日干为「我」，观五行旺衰、十神格局与大运流年。重在推演一生格局与阶段趋势，宜问性情、事业、婚姻等长线之事。",
-  qimen:
-    "奇门遁甲被誉为「帝王之学」，融天、地、人、神四盘于九宫，以三奇六仪、八门九星布局，依节气定阴阳遁与局数。长于择时、谋事、方位与格局的时空推演。",
-  meihua:
-    "梅花易数传为北宋邵雍所创，可由数字或时间起卦，分「体、用」两卦观其生克比和，卦成即断、不拘器物。尤重心易与随机应感，宜问事之成败趋向。",
-  liuyao:
-    "六爻纳甲以三枚铜钱摇六次成卦，配纳干支、六亲、六神、世应，据动爻与用神旺衰断吉凶。体系严密、几乎可问诸事，为民间应用最广的占法之一。",
-  tarot:
-    "塔罗以二十二张大阿尔卡纳为核心，每张牌象征一段人生原型与心理历程，正逆位各有其义。它更像一面映照当下心境的镜子，宜问处境、抉择与内在动因。",
-};
-
-const MAJOR_ARCANA = [
-  "愚者", "魔术师", "女祭司", "皇后", "皇帝", "教皇", "恋人", "战车",
-  "力量", "隐士", "命运之轮", "正义", "倒吊人", "死神", "节制",
-  "恶魔", "高塔", "星星", "月亮", "太阳", "审判", "世界",
-];
-
-// 大阿尔卡纳正/逆位关键词，供解读时参照
-const TAROT_MEANINGS = {
-  愚者: { up: "新的开始、冒险、纯真、自由", rev: "鲁莽、盲目、犹豫不前" },
-  魔术师: { up: "创造、行动力、资源整合、自信", rev: "欺瞒、才能未展、意志薄弱" },
-  女祭司: { up: "直觉、潜意识、静观、秘密", rev: "压抑、疏离、表里不一" },
-  皇后: { up: "丰饶、母性、感性、滋养", rev: "依赖、过度保护、创造受阻" },
-  皇帝: { up: "权威、秩序、责任、掌控", rev: "专断、僵化、失控" },
-  教皇: { up: "传统、信仰、指引、规范", rev: "教条、叛逆、形式主义" },
-  恋人: { up: "结合、抉择、爱与和谐", rev: "失衡、诱惑、错误的选择" },
-  战车: { up: "意志、进取、胜利、掌控方向", rev: "失控、冲动、方向不明" },
-  力量: { up: "内在力量、勇气、耐心、以柔克刚", rev: "自我怀疑、暴躁、软弱" },
-  隐士: { up: "内省、独处、寻求真理、指引", rev: "孤僻、逃避、固执" },
-  命运之轮: { up: "转机、循环、机遇、顺势而为", rev: "逆转、失控、时运不济" },
-  正义: { up: "公正、平衡、因果、担当", rev: "偏颇、失衡、推诿" },
-  倒吊人: { up: "牺牲、换位思考、静待、放下", rev: "徒劳、执迷、拖延" },
-  死神: { up: "结束与重生、转变、放下", rev: "抗拒改变、停滞、纠缠" },
-  节制: { up: "调和、节制、耐心、中道", rev: "失衡、极端、内耗" },
-  恶魔: { up: "欲望、束缚、执念、诱惑", rev: "解脱、觉醒、挣脱枷锁" },
-  高塔: { up: "突变、崩解、觉醒、旧格局瓦解", rev: "拖延的崩溃、勉强维持" },
-  星星: { up: "希望、疗愈、灵感、信心", rev: "失望、迷惘、信心不足" },
-  月亮: { up: "潜意识、幻象、不安、直觉", rev: "迷雾渐散、释放恐惧" },
-  太阳: { up: "成功、喜悦、活力、光明", rev: "短暂受挫、过度乐观" },
-  审判: { up: "觉醒、召唤、清算、重生", rev: "自责、犹疑、逃避审视" },
-  世界: { up: "圆满、达成、整合、周期完成", rev: "未竟、拖延、功亏一篑" },
-};
-
-const TAROT_SPREADS = {
-  1: { label: "单张 · 直取核心", positions: ["核心指引"] },
-  3: { label: "三张 · 过去·现在·未来", positions: ["过去/成因", "现在/处境", "未来/趋向"] },
-};
-
 // 「编年历」编辑排版设计系统 token（源自 MYSAO .dc.html 简报风格）
 const T = {
   canvas: "#EAE2D3",
@@ -530,14 +464,33 @@ function computeMeihua(numbersStr, now) {
 
 /* ---------------- 塔罗抽牌 ---------------- */
 
+// 随机抽牌：从78张里抽 count 张不重复，正逆随机
 function drawTarot(count) {
-  const pool = [...MAJOR_ARCANA];
+  const pool = [...TAROT_DECK];
   const drawn = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count && pool.length; i++) {
     const idx = Math.floor(Math.random() * pool.length);
     const card = pool.splice(idx, 1)[0];
-    const reversed = Math.random() < 0.5;
-    drawn.push({ card, reversed });
+    drawn.push({ card: card.name, code: card.code, reversed: Math.random() < 0.5 });
+  }
+  return drawn;
+}
+
+// 报数字起牌：用用户输入的数字确定抽哪些牌（牌序 mod 78）与正逆（奇偶）
+// nums 例如 [7, 21, 40]；不足时用相邻数字补
+function drawTarotByNumbers(nums, count) {
+  const drawn = [];
+  const used = new Set();
+  for (let i = 0; i < count; i++) {
+    let n = nums[i] != null ? nums[i] : nums.reduce((a, b) => a + b, i + 1);
+    let idx = mod(n - 1, TAROT_DECK.length);
+    // 避免重复
+    let guard = 0;
+    while (used.has(idx) && guard < TAROT_DECK.length) { idx = mod(idx + 1, TAROT_DECK.length); guard++; }
+    used.add(idx);
+    const card = TAROT_DECK[idx];
+    const reversed = n % 2 === 0; // 偶数逆位
+    drawn.push({ card: card.name, code: card.code, reversed });
   }
   return drawn;
 }
@@ -620,6 +573,69 @@ function buildPrompt(systemId, question, extra) {
   }
 }
 
+/* ---------------- 对话式：起局背景 + 聊天风格 ---------------- */
+
+// 聊天版的"人设 + 风格"系统提示（作为 system 传给模型，全程生效）
+const CHAT_STYLE = `你是「小卜」，一位懂传统术数、又特别会跟普通人聊天的解读师。你的说话风格：
+- 用大白话、口语化中文，像微信上跟朋友聊天一样，别端着、别掉书袋。
+- 每次回答简短一些（一般 3~6 句话），这是连续对话，不用一次把话说尽，用户会追问。
+- 出现专业术语（某个宫、某个卦、某颗星、某个门）时，顺带用半句话解释它是什么、代表什么，别只甩术语。
+- 语气温和、给人鼓励，不用"绝对""一定""必然"这种把话说死的词。
+- 少用"吉凶祸福""气运流转"这类空泛古文腔，多讲生活里的具体场景。
+- 如果用户的问题信息不够（比如没说清问的是谁、什么事），可以先反问一句确认，再断。
+- 全程围绕下面这一个已经起好的局面来聊，不要重新起局或改变盘面数据。
+- 不碰赌博、投机下注这类给明确下注指向的内容；遇到就温和地把话题引回理性。`;
+
+// 生成某个体系"这一局的盘面背景"，作为 system 提示的一部分，让模型全程记住这个盘
+function buildCastContext(systemId, extra) {
+  switch (systemId) {
+    case "liuren":
+      return `【本局背景·小六壬】已按农历 ${extra.lunarMonth} 月 ${extra.lunarDay} 日、第${extra.hourNum}个时辰（子时为1）掐指起课，落于「${extra.palace}」宫。全程依据「${extra.palace}」宫的传统断法来聊，不要改变宫位。`;
+    case "bazi":
+      return `【本局背景·八字】已排定四柱八字：年柱${extra.pillars.year}　月柱${extra.pillars.month}　日柱${extra.pillars.day}　时柱${extra.pillars.hour}。全程基于这四柱（日主五行、格局、十神、大运流年）来聊，不要改动干支。`;
+    case "qimen":
+      return (
+        `【本局背景·奇门遁甲】以下为算法精确起出的盘，全程据此聊，不要重新起局：\n` +
+        `局：${extra.dunType}${extra.ju}局（节气：${extra.period}，${extra.yuanName}）\n` +
+        `地盘（宫位数字：${Object.entries(PALACE_NAMES).map(([k, v]) => `${k}=${v}`).join("、")}）：` +
+        `${Object.entries(extra.diPan).map(([stem, gong]) => `${stem}在${gong}宫(${PALACE_NAMES[gong]})`).join("、")}\n` +
+        `当前时辰：${extra.hourInfo.text}（旬首：${extra.xunYi}在${extra.baseGong}宫）\n` +
+        `值符星：${extra.zhiFuStar}飞临${extra.zhiFuGong}宫(${PALACE_NAMES[extra.zhiFuGong]})；值使门：${extra.zhiShiDoor}行至${extra.zhiShiGong}宫(${PALACE_NAMES[extra.zhiShiGong]})\n` +
+        `其余七星七门按九星固定序（天蓬天芮天冲天辅天禽天心天柱天任天英）、八门固定序推排，中五宫寄坤二宫。断法参酌 ${QIMEN_CLASSICS.join("、")} 的传统体系。`
+      );
+    case "meihua":
+      return (
+        `【本局背景·梅花易数】以下为算法精确起出的卦，全程据此聊，不要重新起卦：\n` +
+        `起卦方式：${extra.method}；本卦：${extra.ben.name}（上${extra.upperName}下${extra.lowerName}），第 ${extra.movePos} 爻动；互卦：${extra.hu.name}；变卦：${extra.bian.name}\n` +
+        `体用：体卦${extra.ti.name}(${extra.ti.element})，用卦${extra.yong.name}(${extra.yong.element})。以体为求测之主、用为所问之事，看体用生克比和，参酌互卦（过程）、变卦（结果）。`
+      );
+    case "liuyao":
+      return (
+        `【本局背景·六爻】以下为算法摇钱成卦的结果，全程据此聊，不要重新排卦：\n` +
+        `六爻（初至上）：${extra.raw.map((l, i) => `第${i + 1}爻${l.label}`).join("、")}\n` +
+        `本卦：${extra.ben.name}（上${extra.ben.upper}下${extra.ben.lower}）\n` +
+        (extra.movingPositions.length
+          ? `动爻：第 ${extra.movingPositions.join("、")} 爻；变卦：${extra.bian.name}（上${extra.bian.upper}下${extra.bian.lower}）\n`
+          : `六爻皆静，无动爻变卦，以本卦断\n`) +
+        (extra.sy ? `世爻在第 ${extra.sy.shi} 爻，应爻在第 ${extra.sy.ying} 爻\n` : "") +
+        `按卦名卦义、世应关系与动爻取用来断。`
+      );
+    case "tarot":
+      return (
+        `【本局背景·塔罗】抽牌结果（${extra.spreadLabel}）：\n${extra.cards
+          .map(
+            (c, i) =>
+              `${extra.positions[i] ? extra.positions[i] + "：" : ""}${c.card}（${c.reversed ? "逆位" : "正位"}）——关键词：${
+                c.reversed ? TAROT_MEANINGS[c.card].rev : TAROT_MEANINGS[c.card].up
+              }`
+          )
+          .join("\n")}\n结合牌位与牌义来聊，关键词仅供参照，依情境灵活阐发。`
+      );
+    default:
+      return "";
+  }
+}
+
 /* ---------------- 展示层：设计系统（编年历风格） ---------------- */
 
 const LATIN = {
@@ -683,6 +699,20 @@ const DESIGN_CSS = `
 .backbar{padding:24px 0 0}
 .backbtn{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-sub);cursor:pointer;transition:background .18s}
 .backbtn:hover{background:var(--card3);color:var(--ink)}
+.chat{display:flex;flex-direction:column;gap:14px;margin:6px 0 16px;min-height:120px}
+.chat-hint{background:var(--card);border:1px dashed var(--line2);border-radius:10px;padding:16px 18px;color:var(--ink-sub);font-size:14px;line-height:1.7}
+.bubble{max-width:86%;display:flex;flex-direction:column}
+.bubble.me{align-self:flex-end;align-items:flex-end}
+.bubble.bot{align-self:flex-start;align-items:flex-start}
+.bubble .bot-name{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--gold-txt);margin:0 0 5px 4px}
+.bubble-body{padding:13px 17px;border-radius:16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:break-word}
+.bubble.me .bubble-body{background:var(--ink);color:#fff;border-bottom-right-radius:5px}
+.bubble.bot .bubble-body{background:var(--card);border:1px solid var(--line2);color:var(--ink);border-bottom-left-radius:5px}
+.bubble-body.typing{color:var(--ink-sub);font-style:normal}
+.chat-input{display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 10px 10px 16px;box-shadow:0 6px 24px rgba(58,42,26,.10)}
+.chat-box{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15px;line-height:1.6;color:var(--ink);resize:none;max-height:140px}
+.send-btn{flex:0 0 auto;background:var(--ink);color:#fff;border:0;border-radius:10px;padding:11px 20px;font-size:14px;cursor:pointer;transition:opacity .18s}
+.send-btn:disabled{opacity:.4;cursor:default}
 .sys.sel .no{color:var(--gold-lt2)} .sys.sel .sym{color:var(--gold-lt);opacity:.85} .sys.sel .nm{color:#FBF3E2} .sys.sel .st{color:var(--gold-lt)} .sys.sel .ds{color:var(--cream-dim)}
 .chip-sel{display:inline-block;align-self:flex-start;background:var(--jade);color:#fff;font-family:var(--mono);font-size:10px;border-radius:3px;padding:2px 8px;letter-spacing:.06em;margin-top:12px}
 .intro{font-size:13px;line-height:1.85;color:var(--ink-sub);border-left:3px solid var(--gold);background:var(--gold-bg);padding:12px 16px;border-radius:0 6px 6px 0;margin:0 0 22px}
@@ -851,119 +881,190 @@ function MiniHex({ raw }) {
 
 export default function App() {
   const [selected, setSelected] = useState(null);
-  const [question, setQuestion] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [numbers, setNumbers] = useState("");
   const [lunarMonth, setLunarMonth] = useState("");
   const [lunarDay, setLunarDay] = useState("");
-  const [tarotCount, setTarotCount] = useState(3);
+  const [tarotSpread, setTarotSpread] = useState("overall"); // 牌阵key
+  const [tarotDrawMode, setTarotDrawMode] = useState("random"); // random | numbers
+  const [tarotNumbers, setTarotNumbers] = useState(""); // 报数字起牌
+  const [liurenMode, setLiurenMode] = useState("time"); // time时间起课 | numbers报数起课
+  const [liurenNumbers, setLiurenNumbers] = useState(""); // 报数起课的三个数
+
+  // 对话式状态
+  const [phase, setPhase] = useState("home"); // home | setup | chat  （setup 仅八字/小六壬需要）
+  const [castContext, setCastContext] = useState(""); // 本局盘面背景（作为system一部分）
+  const [castInfo, setCastInfo] = useState(null); // 用于顶部展示算法排盘
+  const [messages, setMessages] = useState([]); // [{role:'user'|'assistant', content}]
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState(null);
-  const [castInfo, setCastInfo] = useState(null);
-  const resultRef = useRef(null);
+  const chatEndRef = useRef(null);
+
+  // 需要先填资料/选项的体系
+  const NEEDS_SETUP = { bazi: true, liuren: true, tarot: true, meihua: true };
 
   function resetForm(id) {
     setSelected(id);
-    setQuestion("");
     setBirthDate("");
     setBirthTime("");
     setNumbers("");
     setLunarMonth("");
     setLunarDay("");
-    setTarotCount(3);
-    setResult(null);
-    setError("");
+    setTarotSpread("overall");
+    setTarotDrawMode("random");
+    setTarotNumbers("");
+    setLiurenMode("time");
+    setLiurenNumbers("");
+    setCastContext("");
     setCastInfo(null);
+    setMessages([]);
+    setInput("");
+    setError("");
+    setLoading(false);
+    if (id == null) {
+      setPhase("home");
+    } else if (NEEDS_SETUP[id]) {
+      setPhase("setup"); // 先填资料/选项
+    } else {
+      startCast(id, {});
+    }
   }
 
-  async function handleSubmit() {
-    if (!selected) return;
-    if (selected === "bazi" && !birthDate) {
-      setError("请填写出生日期");
-      return;
-    }
-    if (selected === "liuren" && (!lunarMonth || !lunarDay)) {
-      setError("请填写农历月、日");
-      return;
-    }
+  // 起局：算出盘面，生成背景，进入对话阶段
+  function startCast(id, opts) {
     setError("");
-    setLoading(true);
-    setResult(null);
-
     const now = new Date();
-    const timeStr = now.toLocaleString("zh-CN", { hour12: false });
-
-    let extra = { time: timeStr };
+    let extra = {};
     let cast = null;
 
-    if (selected === "bazi") {
-      const birthDateTime = new Date(`${birthDate}T${birthTime || "12:00"}`);
+    if (id === "bazi") {
+      const birthDateTime = new Date(`${opts.birthDate}T${opts.birthTime || "12:00"}`);
       const pillars = computeBazi(birthDateTime);
       extra.pillars = pillars;
       cast = { type: "bazi", text: `${pillars.year} ${pillars.month} ${pillars.day} ${pillars.hour}` };
-    } else if (selected === "liuren") {
-      const { palace, hourNum } = computeXiaoLiuRen(Number(lunarMonth), Number(lunarDay), now.getHours());
-      extra.lunarMonth = Number(lunarMonth);
-      extra.lunarDay = Number(lunarDay);
+    } else if (id === "liuren") {
+      let lm, ld, hourForCast;
+      if (opts.liurenMode === "numbers") {
+        // 报数起课：三个数字分别当月、日、时辰序
+        const ns = (opts.liurenNumbers || "").split(/[^0-9]+/).filter(Boolean).map(Number);
+        lm = ns[0] || 1;
+        ld = ns[1] || 1;
+        // 用第三个数字当"时辰"，换算成小时：时辰序1-12 → 代表小时
+        const hourNumInput = ns[2] || 1;
+        hourForCast = (mod(hourNumInput - 1, 12)) * 2; // 反推一个代表小时
+      } else {
+        // 时间起课：用农历库按中国时间自动取农历月日 + 当前时辰
+        const lu = getChinaLunarNow();
+        lm = lu.lunarMonth;
+        ld = lu.lunarDay;
+        hourForCast = lu.chinaHour;
+      }
+      const { palace, hourNum } = computeXiaoLiuRen(Number(lm), Number(ld), hourForCast);
+      extra.lunarMonth = Number(lm);
+      extra.lunarDay = Number(ld);
       extra.hourNum = hourNum;
       extra.palace = palace;
-      cast = { type: "liuren", palace, hourNum };
-    } else if (selected === "meihua") {
-      const mh = computeMeihua(numbers, now);
+      extra.mode = opts.liurenMode === "numbers" ? "报数起课" : "时间起课（按中国时间自动取农历）";
+      cast = { type: "liuren", palace, hourNum, mode: extra.mode, lunarMonth: lm, lunarDay: ld };
+    } else if (id === "meihua") {
+      const mh = computeMeihua(opts.numbers || numbers, now);
       Object.assign(extra, mh);
       cast = { type: "meihua", ...mh };
-    } else if (selected === "liuyao") {
+    } else if (id === "liuyao") {
       const raw = castLiuYao();
       const ly = computeLiuYao(raw);
       extra.raw = raw;
       Object.assign(extra, ly);
       cast = { type: "liuyao", raw, ...ly };
-    } else if (selected === "tarot") {
-      const cards = drawTarot(tarotCount);
-      const spread = TAROT_SPREADS[tarotCount];
+    } else if (id === "tarot") {
+      const spreadKey = opts.tarotSpread || tarotSpread;
+      const spread = TAROT_SPREADS[spreadKey];
+      const count = spread.positions.length;
+      let cards;
+      if (opts.tarotDrawMode === "numbers") {
+        const ns = (opts.tarotNumbers || "").split(/[^0-9]+/).filter(Boolean).map(Number);
+        cards = drawTarotByNumbers(ns.length ? ns : [7, 21, 40, 3], count);
+      } else {
+        cards = drawTarot(count);
+      }
       extra.cards = cards;
       extra.positions = spread.positions;
       extra.spreadLabel = spread.label;
-      cast = { type: "tarot", cards, positions: spread.positions };
-    } else if (selected === "qimen") {
+      cast = { type: "tarot", cards, positions: spread.positions, spreadLabel: spread.label };
+    } else if (id === "qimen") {
       const full = computeQimenFull(now);
       Object.assign(extra, full);
       cast = { type: "qimen", ...full };
-    } else {
-      cast = { type: "time", text: timeStr };
     }
 
+    const ctx = buildCastContext(id, extra);
+    setCastContext(ctx);
     setCastInfo(cast);
+    setMessages([]);
+    setPhase("chat");
+  }
 
-    const prompt = buildPrompt(selected, question, extra);
+  // 提交 setup（八字/小六壬）资料
+  function handleSetupSubmit() {
+    if (selected === "bazi" && !birthDate) {
+      setError("先填一下出生日期哈");
+      return;
+    }
+    if (selected === "liuren" && liurenMode === "numbers" && !liurenNumbers.trim()) {
+      setError("报数起课要先填三个数字哈（月、日、时辰）");
+      return;
+    }
+    if (selected === "tarot" && tarotDrawMode === "numbers" && !tarotNumbers.trim()) {
+      setError("报数起牌要先填数字哈");
+      return;
+    }
+    startCast(selected, {
+      birthDate, birthTime,
+      liurenMode, liurenNumbers,
+      numbers,
+      tarotSpread, tarotDrawMode, tarotNumbers,
+    });
+  }
+
+  // 发送一条对话消息
+  async function sendMessage() {
+    const text = input.trim();
+    if (!text || loading) return;
+    setError("");
+    setInput("");
+
+    const nextMessages = [...messages, { role: "user", content: text }];
+    setMessages(nextMessages);
+    setLoading(true);
 
     try {
-      // 前端不再直连 Anthropic，而是调用自己部署的后端 /api/reading，
-      // 由后端持有 API key 并转发请求，避免 key 暴露在浏览器里。
       const response = await fetch("/api/reading", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          system: CHAT_STYLE + "\n\n" + castContext,
+          messages: nextMessages,
+        }),
       });
       const rawText = await response.text();
       let data;
       try {
         data = JSON.parse(rawText);
       } catch {
-        throw new Error(`后端返回非法数据（HTTP ${response.status}）：${rawText.slice(0, 200)}`);
+        throw new Error(`后端返回异常（HTTP ${response.status}）：${rawText.slice(0, 160)}`);
       }
       if (!response.ok || data.error) {
         throw new Error(data.error || `HTTP ${response.status}`);
       }
-      setResult(data.text || "解读生成失败，请重试。");
+      setMessages((prev) => [...prev, { role: "assistant", content: data.text || "（这一卦一时看不真切，换个说法再问问？）" }]);
     } catch (e) {
-      console.error("请求失败:", e);
-      setError(e.message || "未知错误");
+      setError(e.message || "网络出了点问题，再试一次");
+      // 把刚发的用户消息保留，方便重发
     } finally {
       setLoading(false);
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 80);
     }
   }
 
@@ -1020,6 +1121,8 @@ export default function App() {
         <>
           {row("落宫", <span className="ser">{c.palace}</span>, "l1")}
           {row("时辰", `第 ${c.hourNum} 个时辰`, "l2")}
+          {c.mode && row("起课", c.mode, "l3")}
+          {c.lunarMonth && row("农历", `${c.lunarMonth} 月 ${c.lunarDay} 日`, "l4")}
         </>
       );
     }
@@ -1033,7 +1136,18 @@ export default function App() {
       );
     }
     if (c.type === "tarot") {
-      return <>{c.cards.map((card, i) => row(c.positions[i] || `第 ${i + 1} 张`, `${card.card}（${card.reversed ? "逆位" : "正位"}）`, "t" + i))}</>;
+      return (
+        <>
+          {c.spreadLabel && row("牌阵", c.spreadLabel, "ts")}
+          {c.cards.map((card, i) =>
+            row(
+              c.positions[i] || `第 ${i + 1} 张`,
+              <span><span className="ser">{card.card}</span>（{card.reversed ? "逆位" : "正位"}）</span>,
+              "t" + i
+            )
+          )}
+        </>
+      );
     }
     return null;
   }
@@ -1095,125 +1209,152 @@ export default function App() {
         )}
 
         {/* 详情页：选中体系后显示返回按钮 */}
+        {/* 详情页顶部返回栏 */}
         {selected && (
           <div className="backbar">
             <button className="backbtn" onClick={() => resetForm(null)}>← 返回 · 重新择体</button>
+            {phase === "chat" && (
+              <button className="backbtn" style={{ marginLeft: 10 }} onClick={() => resetForm(selected)}>↻ 重新起局</button>
+            )}
           </div>
         )}
 
-        {/* CHAPTER 02 · 起局 */}
-        {selected && (
+        {/* SETUP · 八字/小六壬 先填资料 */}
+        {selected && phase === "setup" && (
           <section className="section">
             <div className="sec-head">
-              <Kicker code="CHAPTER 02" label={`起局 · ${LATIN[selected]}`} />
-              <h2>{currentSystem.name} · {currentSystem.sub}</h2>
+              <Kicker code="STEP 01" label={`填资料 · ${LATIN[selected]}`} />
+              <h2>{currentSystem.name} · 先填一点信息</h2>
             </div>
-            <p className="intro">{SYSTEM_INTRO[selected]}</p>
-
             <div className="form-card">
-              <div className="form-head">
-                <div className="ft">{currentSystem.name} · 起局</div>
-                <div className="fm">MODE · {LATIN[selected]}<br />WB-2026 · 六体通书</div>
-              </div>
-
               <div className="fgrid">
-                <div>
-                  <label className="flabel">所问之事 · Question</label>
-                  <textarea className="qbox" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="可留空，留空则给出整体运势解读" />
-                </div>
                 <div>
                   {selected === "bazi" && (
                     <>
-                      <label className="flabel">出生日期 · Date</label>
+                      <label className="flabel">出生日期</label>
                       <input className="fin" style={{ marginBottom: 14 }} type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-                      <label className="flabel">出生时间 · Time（选填）</label>
+                      <label className="flabel">出生时间（不知道可留空）</label>
                       <input className="fin" type="time" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} />
                     </>
                   )}
                   {selected === "liuren" && (
                     <>
-                      <div className="frow" style={{ marginBottom: 12 }}>
-                        <div>
-                          <label className="flabel">农历月 1-12</label>
-                          <input className="fin" type="number" min="1" max="12" value={lunarMonth} onChange={(e) => setLunarMonth(e.target.value)} placeholder="例 5" />
-                        </div>
-                        <div>
-                          <label className="flabel">农历日 1-30</label>
-                          <input className="fin" type="number" min="1" max="30" value={lunarDay} onChange={(e) => setLunarDay(e.target.value)} placeholder="例 18" />
-                        </div>
+                      <label className="flabel">起课方式</label>
+                      <div className="spread" style={{ marginBottom: 14 }}>
+                        <button type="button" className={liurenMode === "time" ? "on" : ""} onClick={() => setLiurenMode("time")}>时间起课（自动取农历）</button>
+                        <button type="button" className={liurenMode === "numbers" ? "on" : ""} onClick={() => setLiurenMode("numbers")}>报数起课</button>
                       </div>
-                      <Callout tone="jade" label="时辰 · Auto">时辰按提交时的当下时刻自动取用；请自行核对农历月/日（闰月按当月实际农历数填写）。</Callout>
+                      {liurenMode === "time" ? (
+                        <Callout tone="jade" label="时间起课">按中国时间自动换算成农历月、日，配合当前时辰掐指定局，你什么都不用填，直接开始问即可。</Callout>
+                      ) : (
+                        <>
+                          <label className="flabel">报三个数字（月、日、时辰，用空格隔开）</label>
+                          <input className="fin" type="text" value={liurenNumbers} onChange={(e) => setLiurenNumbers(e.target.value)} placeholder="例 5 18 3" />
+                          <Callout tone="jade" label="报数起课">心中默想所问之事，随口报三个数——第一个当月、第二个当日、第三个当时辰（1-12）。</Callout>
+                        </>
+                      )}
                     </>
                   )}
                   {selected === "meihua" && (
                     <>
-                      <label className="flabel">起卦数字 · Numbers（选填）</label>
+                      <label className="flabel">起卦数字（选填，两个以上数字）</label>
                       <input className="fin" style={{ marginBottom: 12 }} type="text" value={numbers} onChange={(e) => setNumbers(e.target.value)} placeholder="例 7 12" />
-                      <Callout tone="jade" label="起卦法 · How">输入两个以上数字：首数定上卦、次数定下卦、诸数之和定动爻。留空则以当前时间起卦（未接农历库，时间法采阳历干支变体）。</Callout>
+                      <Callout tone="jade" label="起卦法">首数定上卦、次数定下卦、诸数之和定动爻。留空则按当前时间起卦。</Callout>
                     </>
-                  )}
-                  {selected === "liuyao" && (
-                    <Callout tone="gold" label="六爻说明 · How it works">提交后模拟摇钱起卦（六次三枚铜钱），由算法排出本卦、变卦与世应，逐爻定阴阳老少、标出动爻，无需手动排卦。</Callout>
-                  )}
-                  {selected === "qimen" && (
-                    <Callout tone="gold" label="奇门说明 · How it works">以提交时的当下时刻起局。局数、地盘、值符值使均已精确算法计算；其余七星七门按固定序由 AI 补齐。依据：{QIMEN_CLASSICS.join("、")}</Callout>
                   )}
                   {selected === "tarot" && (
                     <>
-                      <label className="flabel">牌阵 · Spread</label>
-                      <div className="spread" style={{ marginBottom: 12 }}>
-                        {Object.entries(TAROT_SPREADS).map(([n, s]) => (
-                          <button key={n} type="button" className={tarotCount === Number(n) ? "on" : ""} onClick={() => setTarotCount(Number(n))}>{s.label}</button>
+                      <label className="flabel">选个牌阵</label>
+                      <div className="spread" style={{ marginBottom: 14, flexWrap: "wrap" }}>
+                        {Object.entries(TAROT_SPREADS).map(([key, s]) => (
+                          <button key={key} type="button" className={tarotSpread === key ? "on" : ""} onClick={() => setTarotSpread(key)}>{s.label}</button>
                         ))}
                       </div>
-                      <Callout tone="jade" label="抽牌 · Draw">提交后从二十二张大阿尔卡纳中随机抽取，正逆位随机。</Callout>
+                      <label className="flabel">抽牌方式</label>
+                      <div className="spread" style={{ marginBottom: 12 }}>
+                        <button type="button" className={tarotDrawMode === "random" ? "on" : ""} onClick={() => setTarotDrawMode("random")}>随机抽牌</button>
+                        <button type="button" className={tarotDrawMode === "numbers" ? "on" : ""} onClick={() => setTarotDrawMode("numbers")}>报数字起牌</button>
+                      </div>
+                      {tarotDrawMode === "numbers" && (
+                        <>
+                          <label className="flabel">报几个数字（空格隔开，几张牌报几个数）</label>
+                          <input className="fin" type="text" value={tarotNumbers} onChange={(e) => setTarotNumbers(e.target.value)} placeholder="例 7 21 40" />
+                        </>
+                      )}
+                      <Callout tone="jade" label="抽牌">随机抽牌由程序随机；报数字起牌则由你报的数字决定抽到哪几张、正逆位。</Callout>
                     </>
                   )}
                 </div>
               </div>
-
               {error && <p className="errline">✕ {error}</p>}
-
               <div className="btn-row">
-                <button className="btn" onClick={handleSubmit} disabled={loading}>{loading ? "推 演 中…" : "起 局"}</button>
+                <button className="btn" onClick={handleSetupSubmit}>好了，开始问 →</button>
               </div>
             </div>
           </section>
         )}
 
-        {loading && (
-          <div className="loading">
-            <div className="lg">研墨　布局　推演…</div>
-            <div className="lm">Casting · please wait</div>
-          </div>
-        )}
-
-        {castInfo && !loading && (
-          <div className="castbar">
-            <div className="cb-head">
-              <Kicker onDark code="CASTING LOG" label="算法排盘" />
-              <span className="cb-code">{LATIN[selected]} · 复算稳定</span>
+        {/* CHAT · 对话界面 */}
+        {selected && phase === "chat" && (
+          <section className="section">
+            <div className="sec-head">
+              <Kicker code="CHAPTER 02" label={`问卜 · ${LATIN[selected]}`} />
+              <h2>{currentSystem.name} · 有什么想问的</h2>
             </div>
-            {castRows()}
-          </div>
-        )}
 
-        {result && !loading && (
-          <section className="section" ref={resultRef}>
-            <div className="sec-head"><Kicker code="CHAPTER 03" label="解读" /></div>
-            <div className="result">
-              <div className="r-head">
-                <div>
-                  <h3>{currentSystem?.name} · 解读</h3>
-                  <div className="rmeta">AI Reading · {LATIN[selected]}</div>
+            {/* 算法排盘（本局盘面，一直展示在对话上方） */}
+            {castInfo && (
+              <div className="castbar" style={{ marginBottom: 18 }}>
+                <div className="cb-head">
+                  <Kicker onDark code="CASTING LOG" label="本局排盘" />
+                  <span className="cb-code">{LATIN[selected]} · 复算稳定</span>
                 </div>
-                <div className="seal"><span>天</span><span>机</span></div>
+                {castRows()}
               </div>
-              <div className="rbody">{result}</div>
-              <div className="rfoot">术数推演仅供参考自省 · 起局由算法精算 · 文字由 AI 生成</div>
+            )}
+
+            {/* 对话气泡区 */}
+            <div className="chat">
+              {messages.length === 0 && !loading && (
+                <div className="chat-hint">局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。</div>
+              )}
+              {messages.map((m, i) => (
+                <div key={i} className={"bubble " + (m.role === "user" ? "me" : "bot")}>
+                  {m.role === "assistant" && <div className="bot-name">小卜</div>}
+                  <div className="bubble-body">{m.content}</div>
+                </div>
+              ))}
+              {loading && (
+                <div className="bubble bot">
+                  <div className="bot-name">小卜</div>
+                  <div className="bubble-body typing">正在理清局势…</div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {error && <p className="errline">✕ {error}</p>}
+
+            {/* 输入框 */}
+            <div className="chat-input">
+              <textarea
+                className="chat-box"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="描述你的问题…（回车发送，Shift+回车换行）"
+                rows={2}
+              />
+              <button className="send-btn" onClick={sendMessage} disabled={loading || !input.trim()}>发送</button>
             </div>
           </section>
         )}
+
 
         {/* APPENDIX · 关于本站（仅首页显示） */}
         {!selected && (
@@ -1249,3 +1390,4 @@ export default function App() {
     </div>
   );
 }
+
