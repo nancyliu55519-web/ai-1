@@ -1,3 +1,160 @@
+import React, { useState, useRef } from "react";
+import * as LunarLib from "lunar-javascript";
+
+// 用农历库把"当前中国时间"换算成农历月、日（避免手填出错）
+// 兼容不同打包环境的导出方式；万一库异常，退化为一个不至于崩溃的估算
+function getChinaLunarNow() {
+  const nowUtc = new Date();
+  const chinaMs = nowUtc.getTime() + (nowUtc.getTimezoneOffset() + 480) * 60000;
+  const c = new Date(chinaMs);
+  try {
+    const Solar = LunarLib.Solar || (LunarLib.default && LunarLib.default.Solar);
+    const solar = Solar.fromYmdHms(
+      c.getFullYear(), c.getMonth() + 1, c.getDate(),
+      c.getHours(), c.getMinutes(), c.getSeconds()
+    );
+    const lunar = solar.getLunar();
+    let m = lunar.getMonth();
+    if (m < 0) m = -m;
+    return { lunarMonth: m, lunarDay: lunar.getDay(), chinaHour: c.getHours() };
+  } catch (e) {
+    // 农历库不可用时的兜底（粗略，仅保证不崩溃；正常情况走上面精确分支）
+    return { lunarMonth: c.getMonth() + 1, lunarDay: c.getDate(), chinaHour: c.getHours() };
+  }
+}
+
+/* ---------------- 数据配置 ---------------- */
+
+const SYSTEMS = [
+  { id: "liuren", name: "小六壬", sub: "掐指速断", glyph: "六" },
+  { id: "bazi", name: "八字", sub: "命理推演", glyph: "命" },
+  { id: "qimen", name: "奇门遁甲", sub: "时空布局", glyph: "奇" },
+  { id: "meihua", name: "梅花易数", sub: "数理起卦", glyph: "梅" },
+  { id: "liuyao", name: "六爻", sub: "摇钱成卦", glyph: "爻" },
+  { id: "tarot", name: "塔罗", sub: "抽牌问心", glyph: "塔" },
+];
+
+// 各体系简介（选中时展示，帮助用户理解其源流与所长）
+const SYSTEM_INTRO = {
+  liuren:
+    "小六壬相传为诸葛武侯所传，以「大安、留连、速喜、赤口、小吉、空亡」六神循环，用农历月、日、时辰三步掐指定局。长于对眼前小事、失物、行人、约见等即时之问速断吉凶。",
+  bazi:
+    "八字（四柱）以出生的年、月、日、时排出天干地支八字，以日干为「我」，观五行旺衰、十神格局与大运流年。重在推演一生格局与阶段趋势，宜问性情、事业、婚姻等长线之事。",
+  qimen:
+    "奇门遁甲被誉为「帝王之学」，融天、地、人、神四盘于九宫，以三奇六仪、八门九星布局，依节气定阴阳遁与局数。长于择时、谋事、方位与格局的时空推演。",
+  meihua:
+    "梅花易数传为北宋邵雍所创，可由数字或时间起卦，分「体、用」两卦观其生克比和，卦成即断、不拘器物。尤重心易与随机应感，宜问事之成败趋向。",
+  liuyao:
+    "六爻纳甲以三枚铜钱摇六次成卦，配纳干支、六亲、六神、世应，据动爻与用神旺衰断吉凶。体系严密、几乎可问诸事，为民间应用最广的占法之一。",
+  tarot:
+    "塔罗以二十二张大阿尔卡纳为核心，每张牌象征一段人生原型与心理历程，正逆位各有其义。它更像一面映照当下心境的镜子，宜问处境、抉择与内在动因。",
+};
+
+// 完整 78 张塔罗牌（韦特体系）：name 中文名，code 图片代号，up/rev 正逆关键词
+// 图片来自公有领域韦特牌（metabismuth/tarot-json，RWS 美国公有领域），CDN 引用
+const TAROT_DECK = [
+  { name: "愚者", code: "m00", up: "新的开始、冒险、纯真、自由", rev: "鲁莽、盲目、犹豫不前" },
+  { name: "魔术师", code: "m01", up: "创造、行动力、资源整合、自信", rev: "欺瞒、才能未展、意志薄弱" },
+  { name: "女祭司", code: "m02", up: "直觉、潜意识、静观、秘密", rev: "压抑、疏离、表里不一" },
+  { name: "皇后", code: "m03", up: "丰饶、母性、感性、滋养", rev: "依赖、过度保护、创造受阻" },
+  { name: "皇帝", code: "m04", up: "权威、秩序、责任、掌控", rev: "专断、僵化、失控" },
+  { name: "教皇", code: "m05", up: "传统、信仰、指引、规范", rev: "教条、叛逆、形式主义" },
+  { name: "恋人", code: "m06", up: "结合、抉择、爱与和谐", rev: "失衡、诱惑、错误的选择" },
+  { name: "战车", code: "m07", up: "意志、进取、胜利、掌控方向", rev: "失控、冲动、方向不明" },
+  { name: "力量", code: "m08", up: "内在力量、勇气、耐心、以柔克刚", rev: "自我怀疑、暴躁、软弱" },
+  { name: "隐士", code: "m09", up: "内省、独处、寻求真理、指引", rev: "孤僻、逃避、固执" },
+  { name: "命运之轮", code: "m10", up: "转机、循环、机遇、顺势而为", rev: "逆转、失控、时运不济" },
+  { name: "正义", code: "m11", up: "公正、平衡、因果、担当", rev: "偏颇、失衡、推诿" },
+  { name: "倒吊人", code: "m12", up: "牺牲、换位思考、静待、放下", rev: "徒劳、执迷、拖延" },
+  { name: "死神", code: "m13", up: "结束与重生、转变、放下", rev: "抗拒改变、停滞、纠缠" },
+  { name: "节制", code: "m14", up: "调和、节制、耐心、中道", rev: "失衡、极端、内耗" },
+  { name: "恶魔", code: "m15", up: "欲望、束缚、执念、诱惑", rev: "解脱、觉醒、挣脱枷锁" },
+  { name: "高塔", code: "m16", up: "突变、崩解、觉醒、旧格局瓦解", rev: "拖延的崩溃、勉强维持" },
+  { name: "星星", code: "m17", up: "希望、疗愈、灵感、信心", rev: "失望、迷惘、信心不足" },
+  { name: "月亮", code: "m18", up: "潜意识、幻象、不安、直觉", rev: "迷雾渐散、释放恐惧" },
+  { name: "太阳", code: "m19", up: "成功、喜悦、活力、光明", rev: "短暂受挫、过度乐观" },
+  { name: "审判", code: "m20", up: "觉醒、召唤、清算、重生", rev: "自责、犹疑、逃避审视" },
+  { name: "世界", code: "m21", up: "圆满、达成、整合、周期完成", rev: "未竟、拖延、功亏一篑" },
+  { name: "权杖王牌", code: "w01", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖二", code: "w02", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖三", code: "w03", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖四", code: "w04", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖五", code: "w05", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖六", code: "w06", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖七", code: "w07", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖八", code: "w08", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖九", code: "w09", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖十", code: "w10", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖侍从", code: "w11", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖骑士", code: "w12", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖王后", code: "w13", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "权杖国王", code: "w14", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
+  { name: "圣杯王牌", code: "c01", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯二", code: "c02", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯三", code: "c03", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯四", code: "c04", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯五", code: "c05", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯六", code: "c06", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯七", code: "c07", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯八", code: "c08", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯九", code: "c09", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯十", code: "c10", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯侍从", code: "c11", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯骑士", code: "c12", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯王后", code: "c13", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "圣杯国王", code: "c14", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
+  { name: "宝剑王牌", code: "s01", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑二", code: "s02", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑三", code: "s03", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑四", code: "s04", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑五", code: "s05", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑六", code: "s06", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑七", code: "s07", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑八", code: "s08", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑九", code: "s09", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑十", code: "s10", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑侍从", code: "s11", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑骑士", code: "s12", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑王后", code: "s13", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "宝剑国王", code: "s14", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
+  { name: "钱币王牌", code: "p01", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币二", code: "p02", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币三", code: "p03", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币四", code: "p04", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币五", code: "p05", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币六", code: "p06", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币七", code: "p07", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币八", code: "p08", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币九", code: "p09", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币十", code: "p10", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币侍从", code: "p11", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币骑士", code: "p12", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币王后", code: "p13", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+  { name: "钱币国王", code: "p14", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
+// 共 78 张
+];
+
+// 牌图 CDN 地址（GitHub raw）。加载失败时前端会退化为"名称卡"占位，不会显示裂图。
+function tarotImg(code) {
+  return `https://raw.githubusercontent.com/metabismuth/tarot-json/master/cards/${code}.jpg`;
+}
+
+// 兼容旧引用：名称→关键词
+const TAROT_MEANINGS = TAROT_DECK.reduce((acc, c) => {
+  acc[c.name] = { up: c.up, rev: c.rev };
+  return acc;
+}, {});
+
+// 牌阵：常用主题，positions 决定抽几张、每张牌位含义
+const TAROT_SPREADS = {
+  overall: { label: "整体运势 · 三张", positions: ["现状", "阻碍/助力", "走向"] },
+  love: { label: "感情 · 三张", positions: ["你的状态", "对方的状态", "两人走向"] },
+  reunion: { label: "复合 · 四张", positions: ["你的心意", "对方的心意", "阻碍", "复合可能"] },
+  wealth: { label: "财运 · 三张", positions: ["当前财运", "机会所在", "需注意"] },
+  career: { label: "事业 · 三张", positions: ["当前处境", "关键因素", "发展趋向"] },
+  single: { label: "直取核心 · 单张", positions: ["核心指引"] },
+};
+
 // 「编年历」编辑排版设计系统 token（源自 MYSAO .dc.html 简报风格）
 const T = {
   canvas: "#EAE2D3",
@@ -879,7 +1036,7 @@ function MiniHex({ raw }) {
 
 /* ---------------- 主组件 ---------------- */
 
-export default function App() {
+function AppInner() {
   const [selected, setSelected] = useState(null);
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
@@ -1391,3 +1548,36 @@ export default function App() {
   );
 }
 
+/* ---------------- 错误边界：任何运行时错误都显示提示，而不是整页白屏 ---------------- */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, msg: "" };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, msg: (error && error.message) || "未知错误" };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#EAE2D3", color: "#241C12", fontFamily: "system-ui,-apple-system,sans-serif", textAlign: "center" }}>
+          <div style={{ maxWidth: 420 }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>☯</div>
+            <h2 style={{ fontSize: 18, margin: "0 0 10px" }}>页面出了点小状况</h2>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#6B5440" }}>刷新一下试试。如果反复出现，把下面这行信息发给开发者：</p>
+            <pre style={{ fontSize: 12, background: "#FFFCF7", border: "1px solid #EFE7D8", borderRadius: 8, padding: "10px 12px", marginTop: 12, whiteSpace: "pre-wrap", textAlign: "left", color: "#B0463A" }}>{this.state.msg}</pre>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
+  );
+}
