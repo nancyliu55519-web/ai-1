@@ -53,9 +53,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  // 清洗消息，只保留 user/assistant 两种角色与字符串内容
+  // 清洗消息：保留 user/assistant，content 允许字符串或数组（数组用于携带图片）
   const cleanMessages = messages
-    .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+    .filter((m) => m && (m.role === "user" || m.role === "assistant") && (typeof m.content === "string" || Array.isArray(m.content)))
     .map((m) => ({ role: m.role, content: m.content }));
 
   if (cleanMessages.length === 0) {
