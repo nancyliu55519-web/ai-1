@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import * as LunarLib from "lunar-javascript";
 
 // 用农历库把"当前中国时间"换算成农历月、日（避免手填出错）
@@ -16,22 +16,10 @@ function getChinaLunarNow() {
     const lunar = solar.getLunar();
     let m = lunar.getMonth();
     if (m < 0) m = -m;
-    return { ok: true, lunarMonth: m, lunarDay: lunar.getDay(), chinaHour: c.getHours() };
+    return { lunarMonth: m, lunarDay: lunar.getDay(), chinaHour: c.getHours() };
   } catch (e) {
-    // 农历库不可用：明确返回失败，绝不能拿公历数字冒充农历（会导致起课全错）
-    return { ok: false, chinaHour: c.getHours() };
-  }
-}
-
-// 农历(年月日)转公历，供八字的农历输入用；失败返回null
-function lunarToSolarDate(y, m, d) {
-  try {
-    const Lunar = LunarLib.Lunar || (LunarLib.default && LunarLib.default.Lunar);
-    const lunar = Lunar.fromYmd(y, m, d);
-    const s = lunar.getSolar();
-    return new Date(s.getYear(), s.getMonth() - 1, s.getDay(), 12, 0, 0);
-  } catch (e) {
-    return null;
+    // 农历库不可用时的兜底（粗略，仅保证不崩溃；正常情况走上面精确分支）
+    return { lunarMonth: c.getMonth() + 1, lunarDay: c.getDate(), chinaHour: c.getHours() };
   }
 }
 
@@ -65,85 +53,84 @@ const SYSTEM_INTRO = {
 // 完整 78 张塔罗牌（韦特体系）：name 中文名，code 图片代号，up/rev 正逆关键词
 // 图片来自公有领域韦特牌（metabismuth/tarot-json，RWS 美国公有领域），CDN 引用
 const TAROT_DECK = [
-  { name: "愚者", code: "m00", up: "新的开始、冒险、纯真、自由", rev: "鲁莽、盲目、犹豫不前" },
-  { name: "魔术师", code: "m01", up: "创造、行动力、资源整合、自信", rev: "欺瞒、才能未展、意志薄弱" },
-  { name: "女祭司", code: "m02", up: "直觉、潜意识、静观、秘密", rev: "压抑、疏离、表里不一" },
-  { name: "皇后", code: "m03", up: "丰饶、母性、感性、滋养", rev: "依赖、过度保护、创造受阻" },
-  { name: "皇帝", code: "m04", up: "权威、秩序、责任、掌控", rev: "专断、僵化、失控" },
-  { name: "教皇", code: "m05", up: "传统、信仰、指引、规范", rev: "教条、叛逆、形式主义" },
-  { name: "恋人", code: "m06", up: "结合、抉择、爱与和谐", rev: "失衡、诱惑、错误的选择" },
-  { name: "战车", code: "m07", up: "意志、进取、胜利、掌控方向", rev: "失控、冲动、方向不明" },
-  { name: "力量", code: "m08", up: "内在力量、勇气、耐心、以柔克刚", rev: "自我怀疑、暴躁、软弱" },
-  { name: "隐士", code: "m09", up: "内省、独处、寻求真理、指引", rev: "孤僻、逃避、固执" },
-  { name: "命运之轮", code: "m10", up: "转机、循环、机遇、顺势而为", rev: "逆转、失控、时运不济" },
-  { name: "正义", code: "m11", up: "公正、平衡、因果、担当", rev: "偏颇、失衡、推诿" },
-  { name: "倒吊人", code: "m12", up: "牺牲、换位思考、静待、放下", rev: "徒劳、执迷、拖延" },
-  { name: "死神", code: "m13", up: "结束与重生、转变、放下", rev: "抗拒改变、停滞、纠缠" },
-  { name: "节制", code: "m14", up: "调和、节制、耐心、中道", rev: "失衡、极端、内耗" },
-  { name: "恶魔", code: "m15", up: "欲望、束缚、执念、诱惑", rev: "解脱、觉醒、挣脱枷锁" },
-  { name: "高塔", code: "m16", up: "突变、崩解、觉醒、旧格局瓦解", rev: "拖延的崩溃、勉强维持" },
-  { name: "星星", code: "m17", up: "希望、疗愈、灵感、信心", rev: "失望、迷惘、信心不足" },
-  { name: "月亮", code: "m18", up: "潜意识、幻象、不安、直觉", rev: "迷雾渐散、释放恐惧" },
-  { name: "太阳", code: "m19", up: "成功、喜悦、活力、光明", rev: "短暂受挫、过度乐观" },
-  { name: "审判", code: "m20", up: "觉醒、召唤、清算、重生", rev: "自责、犹疑、逃避审视" },
-  { name: "世界", code: "m21", up: "圆满、达成、整合、周期完成", rev: "未竟、拖延、功亏一篑" },
-  { name: "权杖王牌", code: "w01", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖二", code: "w02", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖三", code: "w03", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖四", code: "w04", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖五", code: "w05", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖六", code: "w06", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖七", code: "w07", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖八", code: "w08", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖九", code: "w09", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖十", code: "w10", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖侍从", code: "w11", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖骑士", code: "w12", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖王后", code: "w13", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "权杖国王", code: "w14", up: "行动、热情、创造、进取", rev: "拖延、内耗、方向不明" },
-  { name: "圣杯王牌", code: "c01", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯二", code: "c02", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯三", code: "c03", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯四", code: "c04", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯五", code: "c05", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯六", code: "c06", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯七", code: "c07", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯八", code: "c08", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯九", code: "c09", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯十", code: "c10", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯侍从", code: "c11", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯骑士", code: "c12", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯王后", code: "c13", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "圣杯国王", code: "c14", up: "情感、关系、直觉、滋养", rev: "情绪淤堵、失落、疏离" },
-  { name: "宝剑王牌", code: "s01", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑二", code: "s02", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑三", code: "s03", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑四", code: "s04", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑五", code: "s05", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑六", code: "s06", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑七", code: "s07", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑八", code: "s08", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑九", code: "s09", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑十", code: "s10", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑侍从", code: "s11", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑骑士", code: "s12", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑王后", code: "s13", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "宝剑国王", code: "s14", up: "思考、沟通、抉择、真相", rev: "焦虑、冲突、思虑过度" },
-  { name: "钱币王牌", code: "p01", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币二", code: "p02", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币三", code: "p03", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币四", code: "p04", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币五", code: "p05", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币六", code: "p06", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币七", code: "p07", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币八", code: "p08", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币九", code: "p09", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币十", code: "p10", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币侍从", code: "p11", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币骑士", code: "p12", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币王后", code: "p13", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-  { name: "钱币国王", code: "p14", up: "务实、财物、工作、身体", rev: "匮乏感、停滞、患得患失" },
-// 共 78 张
+  { name: "愚者", code: "m00", up: "新的开始、冒险、纯真、自由、无限可能", rev: "鲁莽、盲目、逃避责任、犹豫不前" },
+  { name: "魔术师", code: "m01", up: "创造、行动力、资源整合、自信、显化", rev: "欺瞒、才能未展、意志薄弱、操纵" },
+  { name: "女祭司", code: "m02", up: "直觉、潜意识、静观、秘密、内在智慧", rev: "压抑、疏离、表里不一、忽视直觉" },
+  { name: "皇后", code: "m03", up: "丰饶、母性、感性、滋养、丰盛", rev: "依赖、过度保护、创造受阻、空虚" },
+  { name: "皇帝", code: "m04", up: "权威、秩序、责任、掌控、稳固", rev: "专断、僵化、失控、滥权" },
+  { name: "教皇", code: "m05", up: "传统、信仰、指引、规范、精神导师", rev: "教条、叛逆、形式主义、僵化信念" },
+  { name: "恋人", code: "m06", up: "结合、抉择、爱与和谐、价值观一致", rev: "失衡、诱惑、错误的选择、分歧" },
+  { name: "战车", code: "m07", up: "意志、进取、胜利、掌控方向、克服", rev: "失控、冲动、方向不明、内耗" },
+  { name: "力量", code: "m08", up: "内在力量、勇气、耐心、以柔克刚、慈悲", rev: "自我怀疑、暴躁、软弱、失去信心" },
+  { name: "隐士", code: "m09", up: "内省、独处、寻求真理、指引、沉淀", rev: "孤僻、逃避、固执、与世隔绝" },
+  { name: "命运之轮", code: "m10", up: "转机、循环、机遇、顺势而为、时来运转", rev: "逆转、失控、时运不济、抗拒变化" },
+  { name: "正义", code: "m11", up: "公正、平衡、因果、担当、真相", rev: "偏颇、失衡、推诿、逃避责任" },
+  { name: "倒吊人", code: "m12", up: "牺牲、换位思考、静待、放下、转念", rev: "徒劳、执迷、拖延、无谓牺牲" },
+  { name: "死神", code: "m13", up: "结束与重生、转变、放下、蜕变", rev: "抗拒改变、停滞、纠缠、不肯放手" },
+  { name: "节制", code: "m14", up: "调和、节制、耐心、中道、融合", rev: "失衡、极端、内耗、缺乏耐心" },
+  { name: "恶魔", code: "m15", up: "欲望、束缚、执念、诱惑、物质沉迷", rev: "解脱、觉醒、挣脱枷锁、直面阴影" },
+  { name: "高塔", code: "m16", up: "突变、崩解、觉醒、旧格局瓦解、真相冲击", rev: "拖延的崩溃、勉强维持、逃避剧变" },
+  { name: "星星", code: "m17", up: "希望、疗愈、灵感、信心、指引", rev: "失望、迷惘、信心不足、理想幻灭" },
+  { name: "月亮", code: "m18", up: "潜意识、幻象、不安、直觉、隐藏之事", rev: "迷雾渐散、释放恐惧、真相浮现" },
+  { name: "太阳", code: "m19", up: "成功、喜悦、活力、光明、圆满", rev: "短暂受挫、过度乐观、光芒受遮" },
+  { name: "审判", code: "m20", up: "觉醒、召唤、清算、重生、顿悟", rev: "自责、犹疑、逃避审视、错失召唤" },
+  { name: "世界", code: "m21", up: "圆满、达成、整合、周期完成、圆融", rev: "未竟、拖延、功亏一篑、缺乏收尾" },
+  { name: "权杖王牌", code: "w01", up: "行动的火花、灵感、新机会、热情萌动", rev: "延迟、缺乏方向、机会落空" },
+  { name: "权杖二", code: "w02", up: "规划、抉择、远见、掌握主动", rev: "犹豫不决、缺乏计划、恐惧未知" },
+  { name: "权杖三", code: "w03", up: "扩展、远景、等待回报、贸易", rev: "计划受阻、目光短浅、延误" },
+  { name: "权杖四", code: "w04", up: "庆祝、稳定、和谐、归属、里程碑", rev: "不稳、过渡期、庆祝延后" },
+  { name: "权杖五", code: "w05", up: "竞争、冲突、分歧、磨合", rev: "避免冲突、内耗、化解争端" },
+  { name: "权杖六", code: "w06", up: "胜利、认可、凯旋、领导", rev: "失利、名不副实、骄兵必败" },
+  { name: "权杖七", code: "w07", up: "坚守、防御、挑战、占据优势", rev: "招架不住、放弃、退让" },
+  { name: "权杖八", code: "w08", up: "迅速、进展、消息传来、行动加速", rev: "延误、匆促、失序、受阻" },
+  { name: "权杖九", code: "w09", up: "坚持、警觉、蓄势、最后防线", rev: "精疲力竭、固执、防备过度" },
+  { name: "权杖十", code: "w10", up: "重担、责任过载、独力承担、临近完成", rev: "放下重担、卸责、不堪重负" },
+  { name: "权杖侍从", code: "w11", up: "热情的使者、消息、探索、行动派", rev: "冲动、坏消息、缺乏方向" },
+  { name: "权杖骑士", code: "w12", up: "行动力、冒险、魄力、勇往直前", rev: "鲁莽、急躁、半途而废" },
+  { name: "权杖王后", code: "w13", up: "自信、魅力、热情、独立的女性能量", rev: "跋扈、善妒、情绪化" },
+  { name: "权杖国王", code: "w14", up: "领导、远见、魄力、事业格局", rev: "专横、急功近利、刚愎" },
+  { name: "圣杯王牌", code: "c01", up: "新感情、情感萌发、爱、直觉开启", rev: "情感封闭、失落、空虚" },
+  { name: "圣杯二", code: "c02", up: "结合、伙伴、互相吸引、和谐关系", rev: "失和、分离、关系失衡" },
+  { name: "圣杯三", code: "c03", up: "友谊、庆祝、团聚、共享喜悦", rev: "过度放纵、聚散、小圈子矛盾" },
+  { name: "圣杯四", code: "c04", up: "倦怠、冷淡、错失、内省", rev: "走出低潮、重新接纳、新机会" },
+  { name: "圣杯五", code: "c05", up: "失落、遗憾、执着已失、悲伤", rev: "接受、放下、重拾希望" },
+  { name: "圣杯六", code: "c06", up: "回忆、纯真、旧情、善意", rev: "沉溺过去、幼稚、走出回忆" },
+  { name: "圣杯七", code: "c07", up: "选择、幻想、诱惑、白日梦", rev: "看清现实、务实抉择、幻灭" },
+  { name: "圣杯八", code: "c08", up: "离开、追寻更深意义、放下现状", rev: "逃避、漂泊不定、回头" },
+  { name: "圣杯九", code: "c09", up: "满足、心愿达成、如愿、幸福", rev: "表面满足、贪求、心愿落空" },
+  { name: "圣杯十", code: "c10", up: "圆满、家庭和乐、情感归宿、幸福", rev: "家庭失和、貌合神离、价值失衡" },
+  { name: "圣杯侍从", code: "c11", up: "感性的使者、情书、温柔、创意", rev: "情绪化、多愁善感、不成熟" },
+  { name: "圣杯骑士", code: "c12", up: "浪漫、追求、理想主义、情感行动", rev: "不切实际、见异思迁、情绪用事" },
+  { name: "圣杯王后", code: "c13", up: "共情、体贴、包容、情感成熟", rev: "情绪泛滥、依赖、拿捏失度" },
+  { name: "圣杯国王", code: "c14", up: "情感成熟、宽厚、外交、包容", rev: "情感压抑、喜怒无常、冷漠" },
+  { name: "宝剑王牌", code: "s01", up: "突破、真相、清晰、决断、思维之力", rev: "混乱、思绪不清、误用力量" },
+  { name: "宝剑二", code: "s02", up: "僵局、回避、两难、暂时平衡", rev: "做出抉择、走出僵局、真相揭露" },
+  { name: "宝剑三", code: "s03", up: "心碎、悲伤、背叛、痛苦真相", rev: "走出伤痛、宽恕、疗愈开始" },
+  { name: "宝剑四", code: "s04", up: "休整、静养、暂停、内在沉淀", rev: "苏醒、恢复、重新投入" },
+  { name: "宝剑五", code: "s05", up: "冲突、失利、逞强、两败俱伤", rev: "化解、退让、修复关系" },
+  { name: "宝剑六", code: "s06", up: "过渡、离开、驶向平静、疗愈之旅", rev: "滞留、难以脱身、旧伤未愈" },
+  { name: "宝剑七", code: "s07", up: "谋略、独行、暗中行事、取巧", rev: "坦白、良心发现、计谋败露" },
+  { name: "宝剑八", code: "s08", up: "受限、自缚、困境、无力感", rev: "挣脱束缚、突破限制、释放" },
+  { name: "宝剑九", code: "s09", up: "焦虑、恐惧、噩梦、忧思过度", rev: "走出焦虑、释怀、看见希望" },
+  { name: "宝剑十", code: "s10", up: "终结、谷底、彻底了结、痛苦到头", rev: "缓慢复原、触底反弹、放下" },
+  { name: "宝剑侍从", code: "s11", up: "敏锐的使者、警觉、直言、观察", rev: "刻薄、多疑、口舌是非" },
+  { name: "宝剑骑士", code: "s12", up: "果决、直率、冲锋、雷厉风行", rev: "鲁莽、好斗、急于求成" },
+  { name: "宝剑王后", code: "s13", up: "理性、独立、明辨、就事论事", rev: "冷漠、苛刻、孤高" },
+  { name: "宝剑国王", code: "s14", up: "权威、理智、公正、原则", rev: "专断、冷酷、以理压人" },
+  { name: "钱币王牌", code: "p01", up: "新机会、务实起步、财源、丰盛种子", rev: "错失良机、贪财、根基不稳" },
+  { name: "钱币二", code: "p02", up: "平衡、灵活应对、多头兼顾、周转", rev: "失衡、手忙脚乱、入不敷出" },
+  { name: "钱币三", code: "p03", up: "协作、技艺、精进、团队认可", rev: "各自为政、马虎、缺乏配合" },
+  { name: "钱币四", code: "p04", up: "守成、稳固、掌控、安全感", rev: "过度紧握、吝啬、患得患失" },
+  { name: "钱币五", code: "p05", up: "匮乏、困顿、失援、身心受困", rev: "走出困境、援手出现、复元" },
+  { name: "钱币六", code: "p06", up: "给予与接受、慷慨、资源流动、施与", rev: "施舍不均、债务、附带条件" },
+  { name: "钱币七", code: "p07", up: "耕耘、等待、评估、长线投入", rev: "急功近利、投入无果、焦躁" },
+  { name: "钱币八", code: "p08", up: "专注、勤勉、精进技艺、积累", rev: "敷衍、停滞、只顾眼前" },
+  { name: "钱币九", code: "p09", up: "丰足、独立、自给、优雅从容", rev: "依赖、挥霍、表面光鲜" },
+  { name: "钱币十", code: "p10", up: "富足、传承、家业、长久稳固", rev: "家财纠纷、短视、根基动摇" },
+  { name: "钱币侍从", code: "p11", up: "务实的使者、好消息、勤学、脚踏实地", rev: "懒散、拖延、纸上谈兵" },
+  { name: "钱币骑士", code: "p12", up: "踏实、可靠、坚持、稳步推进", rev: "刻板、保守、进展迟缓" },
+  { name: "钱币王后", code: "p13", up: "务实、丰盛、持家、安稳滋养", rev: "过度务实、占有欲、忽视情感" },
+  { name: "钱币国王", code: "p14", up: "富足、事业有成、稳健、掌控资源", rev: "贪婪、固执、以财自重" },
 ];
 
 // 牌图 CDN 地址（GitHub raw）。加载失败时前端会退化为"名称卡"占位，不会显示裂图。
@@ -159,12 +146,18 @@ const TAROT_MEANINGS = TAROT_DECK.reduce((acc, c) => {
 
 // 牌阵：常用主题，positions 决定抽几张、每张牌位含义
 const TAROT_SPREADS = {
-  overall: { label: "整体运势 · 三张", positions: ["现状", "阻碍/助力", "走向"] },
-  love: { label: "感情 · 三张", positions: ["你的状态", "对方的状态", "两人走向"] },
-  reunion: { label: "复合 · 四张", positions: ["你的心意", "对方的心意", "阻碍", "复合可能"] },
-  wealth: { label: "财运 · 三张", positions: ["当前财运", "机会所在", "需注意"] },
-  career: { label: "事业 · 三张", positions: ["当前处境", "关键因素", "发展趋向"] },
-  single: { label: "直取核心 · 单张", positions: ["核心指引"] },
+  single: { label: "直取核心 · 单张", group: "基础", positions: ["核心指引"] },
+  overall: { label: "整体运势 · 三张", group: "基础", positions: ["现状", "阻碍/助力", "走向"] },
+  year: { label: "年运概览 · 四张", group: "基础", positions: ["当前基调", "机遇所在", "需留意的挑战", "整体建议"] },
+  love: { label: "感情 · 三张", group: "情感关系", positions: ["你的状态", "对方的状态", "两人走向"] },
+  reunion: { label: "复合 · 四张", group: "情感关系", positions: ["你的心意", "对方的心意", "阻碍", "复合可能"] },
+  relationship: { label: "关系深度 · 五张", group: "情感关系", positions: ["你在关系中的状态", "对方在关系中的状态", "关系的根基", "当下的挑战", "关系的走向"] },
+  wealth: { label: "财运 · 三张", group: "事业财运", positions: ["当前财运", "机会所在", "需注意"] },
+  career: { label: "事业 · 三张", group: "事业财运", positions: ["当前处境", "关键因素", "发展趋向"] },
+  study: { label: "学业考试 · 三张", group: "事业财运", positions: ["当前状态", "关键阻碍", "结果趋向"] },
+  choice: { label: "二选一 · 四张", group: "决策辅助", positions: ["选项A", "选项B", "你的真实心意", "综合建议"] },
+  decision: { label: "决策十字 · 五张", group: "决策辅助", positions: ["当前处境", "面临的挑战", "内在根基/过去影响", "近期发展", "最终结果"] },
+  health: { label: "身心调理 · 三张", group: "其他", positions: ["当前身心状态", "需留意之处", "调理方向"] },
 };
 
 // 「编年历」编辑排版设计系统 token（源自 MYSAO .dc.html 简报风格）
@@ -288,56 +281,126 @@ function computeBazi(date) {
     hour: hour.text,
     dayStemIdx: day.stemIdx,
     yearBranchIdx,
-    yearStemIdx,
-    monthStemIdx,
-    monthBranchIdx,
   };
 }
 
-// ---------------- 八字：大运排盘 ----------------
-// 阳年干(甲丙戊庚壬,偶数idx)男顺排、女逆排；阴年干男逆排、女顺排。
-// 从月柱干支起，顺/逆推8步大运。起运岁数按"距最近节气天数÷3"折算（节气用近似日期表，±1天误差→起运约±4个月误差）。
-function computeDaYun(date, pillars, gender) {
-  const yangYear = pillars.yearStemIdx % 2 === 0; // 甲丙戊庚壬为阳
-  const isMale = gender === "男";
-  const forward = (yangYear && isMale) || (!yangYear && !isMale); // 顺排
+// ---------------- 八字精确排盘 + 大运（基于 lunar-javascript，节气精确到分钟，供「八字」体系专用） ----------------
+const { Solar: LSolar, Lunar: LLunar, LunarYear: LLunarYearClass } = (function () {
+  const base = LunarLib.default || LunarLib;
+  return { Solar: base.Solar, Lunar: base.Lunar, LunarYear: base.LunarYear };
+})();
 
-  // 找出生日期前后最近的节气边界（用12节气表，即月柱边界）
-  const y = date.getFullYear();
-  const boundsAll = [];
-  for (let yy = y - 1; yy <= y + 1; yy++) {
-    for (const b of JIEQI_BOUNDS) {
-      boundsAll.push(Date.UTC(yy, b.m - 1, b.d));
-    }
-  }
-  boundsAll.sort((a, b) => a - b);
-  const birthTs = Date.UTC(y, date.getMonth(), date.getDate());
-  let target;
-  if (forward) {
-    target = boundsAll.find((t) => t > birthTs);
-  } else {
-    target = [...boundsAll].reverse().find((t) => t < birthTs);
-  }
-  const daysDiff = Math.abs(Math.round((target - birthTs) / 86400000));
-  const qiyunYears = Math.max(1, Math.round(daysDiff / 3)); // 3天折1岁，最少1岁
-
-  // 从月柱推大运干支（60甲子序列上顺/逆走）
-  const monthIdx60 = (() => {
-    // 找到月柱在60甲子中的位置
-    for (let i = 0; i < 60; i++) {
-      if (mod(i, 10) === pillars.monthStemIdx && mod(i, 12) === pillars.monthBranchIdx) return i;
-    }
+// 查询某农历年是否有闰月，返回闰月月份数字（0 表示当年无闰月）
+function getLunarLeapMonth(lunarYear) {
+  try {
+    return LLunarYearClass.fromYear(Number(lunarYear)).getLeapMonth();
+  } catch (e) {
     return 0;
-  })();
-  const dir = forward ? 1 : -1;
-  const luck = [];
-  for (let step = 1; step <= 8; step++) {
-    const idx = mod(monthIdx60 + dir * step, 60);
-    const gz = STEMS[mod(idx, 10)] + BRANCHES[mod(idx, 12)];
-    const startAge = qiyunYears + (step - 1) * 10;
-    luck.push({ gz, startAge, endAge: startAge + 9 });
   }
-  return { forward, qiyunYears, luck };
+}
+
+// inputs: { calendar:'solar'|'lunar', year, month, day, isLeapMonth, hour, minute, hourUnknown, gender:'male'|'female'|'unknown' }
+function computeBaziPrecise(inputs) {
+  const hour = inputs.hourUnknown ? 12 : (inputs.hour != null && inputs.hour !== "" ? Number(inputs.hour) : 12);
+  const minute = inputs.hourUnknown ? 0 : (inputs.minute != null && inputs.minute !== "" ? Number(inputs.minute) : 0);
+
+  let lunar;
+  if (inputs.calendar === "lunar") {
+    const m = inputs.isLeapMonth ? -Math.abs(Number(inputs.month)) : Math.abs(Number(inputs.month));
+    lunar = LLunar.fromYmdHms(Number(inputs.year), m, Number(inputs.day), hour, minute, 0);
+  } else {
+    const solar = LSolar.fromYmdHms(Number(inputs.year), Number(inputs.month), Number(inputs.day), hour, minute, 0);
+    lunar = solar.getLunar();
+  }
+
+  const eightChar = lunar.getEightChar();
+  const solarOut = lunar.getSolar();
+
+  const pillars = {
+    year: eightChar.getYear(),
+    month: eightChar.getMonth(),
+    day: eightChar.getDay(),
+    hour: inputs.hourUnknown ? null : eightChar.getTime(),
+  };
+
+  const naYin = {
+    year: eightChar.getYearNaYin(),
+    month: eightChar.getMonthNaYin(),
+    day: eightChar.getDayNaYin(),
+    hour: inputs.hourUnknown ? null : eightChar.getTimeNaYin(),
+  };
+
+  function buildYun(genderCode) {
+    const yun = eightChar.getYun(genderCode, 1);
+    const list = yun.getDaYun(9).map((d) => ({
+      index: d.getIndex(),
+      ganzhi: d.getGanZhi(),
+      startYear: d.getStartYear(),
+      endYear: d.getEndYear(),
+      startAge: d.getStartAge(),
+      endAge: d.getEndAge(),
+    }));
+    return {
+      forward: yun.isForward(),
+      startYear: yun.getStartYear(),
+      startMonth: yun.getStartMonth(),
+      startDay: yun.getStartDay(),
+      startSolar: yun.getStartSolar().toYmd(),
+      list,
+    };
+  }
+
+  let dayun;
+  let genderNote = "";
+  if (inputs.gender === "male" || inputs.gender === "female") {
+    dayun = buildYun(inputs.gender === "male" ? 1 : 0);
+  } else {
+    dayun = { unknownGender: true, male: buildYun(1), female: buildYun(0) };
+    genderNote = "性别未填，大运顺逆排方向无法确定，下面同时列出按男命、按女命两种排法，仅供参考。";
+  }
+
+  return {
+    pillars,
+    naYin,
+    lunarText: lunar.toString(),
+    solarText: solarOut.toYmd(),
+    hourUnknown: !!inputs.hourUnknown,
+    gender: inputs.gender,
+    dayun,
+    genderNote,
+  };
+}
+
+// 时辰倒推定盘：三大地支组（子午卯酉 / 寅申巳亥 / 辰戌丑未），供外貌/睡姿/性格初筛
+const SHICHEN_GROUPS = {
+  ziwumaoyou: {
+    label: "子午卯酉组",
+    branches: ["子", "午", "卯", "酉"],
+    appearance: "方圆脸型、仰睡为主、发旋居中、小指尖超过无名指最上关节横纹",
+    personality: "性子直、心思外露，兄弟姐妹排行通常靠前或人数较多（口诀：子午卯酉兄弟多）",
+  },
+  yinshensihai: {
+    label: "寅申巳亥组",
+    branches: ["寅", "申", "巳", "亥"],
+    appearance: "长脸型、侧睡为主、发旋偏向一侧、小指尖与无名指最上关节横纹基本齐平",
+    personality: "心思敏感、外柔内动，兄弟姐妹排行居中（口诀：寅申巳亥两三位）",
+  },
+  chenxuchouwei: {
+    label: "辰戌丑未组",
+    branches: ["辰", "戌", "丑", "未"],
+    appearance: "脸型方中带圆、不规则、趴睡为主、双旋或明显偏旋、小指尖不及无名指最上关节横纹",
+    personality: "性子沉、独立性强，多为独生或与其他排行不同的孩子（口诀：辰戌丑未独一个）",
+  },
+};
+
+// 同一天不同地支时辰下的完整八字预览（时辰倒推候选比对用）
+const SHICHEN_HOUR_MAP = { 子: 0, 丑: 2, 寅: 4, 卯: 6, 辰: 8, 巳: 10, 午: 12, 未: 14, 申: 16, 酉: 18, 戌: 20, 亥: 22 };
+function buildShichenCandidates(calendar, year, month, day, isLeapMonth, branches, gender) {
+  return branches.map((branch) => {
+    const hour = SHICHEN_HOUR_MAP[branch];
+    const result = computeBaziPrecise({ calendar, year, month, day, isLeapMonth, hour, minute: 0, hourUnknown: false, gender });
+    return { branch, hour, result };
+  });
 }
 
 // ---------------- 奇门遁甲：局数精确计算 ----------------
@@ -387,6 +450,35 @@ const YANG_TERMS = new Set([
 // 奇门遁甲解读所依据的典籍体系
 const QIMEN_CLASSICS = ["《奇门遁甲统宗大全》", "《遁甲演义》（明·程道生）", "《御定奇门宝鉴》", "《开门之悟》（张志春）"];
 const FOUNDATION_CLASSICS = ["《五行大义》", "《天干地支》", "《周易本义》", "《阴阳五行解密》"];
+
+// 各体系解读所依据的典籍参考（用于「关于本站」展示 + 拼入AI提示，让措辞贴合传统体系而非现代简化说法）
+const LIUREN_CLASSICS = [
+  "《小六壬基础与技法》", "《易经开悟》（煜燊）", "《小六壬入门通解》（佚名）", "《五行大义》（隋·萧吉）",
+  "《高级小六壬》（合集）", "《祖传民间小六壬预测全集》（江春义）", "《小六壬归元典藏》（慕言秋水）",
+  "《诸葛亮神通风水小六壬》", "《增补万全玉匣记》（李真人/赵嘉宁译）", "《迷信历》（清·沈亮功）", "《百战奇略》（明·刘基）",
+];
+const BAZI_CLASSICS = [
+  "《三命通会》（明·万民英）", "《渊海子平》（宋·徐子平）", "《穷通宝鉴》", "《子平真诠》（清·沈孝瞻）",
+  "《滴天髓》（宋·京图）", "《李虚中命书》", "《星平会海》（明代合集）",
+  "洪丕谟《中国古代算命术》", "潘昭佑《八字揭秘》", "徐伟刚《子平术精析》",
+];
+const MEIHUA_CLASSICS = [
+  "《梅花易数》白话译注版（刘光本/荣益译注，1993）", "《宋惠彬易经系列—梅花易数/外应学》", "《梅花易数入门通解》（王炳中）",
+  "《梅花心易疏证》（杨波）", "《梅花易数实战详解》（黄鉴）", "《周易尚氏学》（尚秉和）", "《皇极经世书解》（邵雍原著）",
+  "明抄本《梅花易数》（韩国馆藏复刻）", "《邵康节先生心易梅花数》（子部珍本汇刊）", "民国《增删梅花易数》（袁树珊）",
+];
+const LIUYAO_CLASSICS = [
+  "《古筮真诠》（朱辰彬）", "《六爻入门与实战》（王虎应）", "《宋惠彬易经系列—六爻》", "《周易预测学》（邵伟华）",
+  "《六爻详真》（曲炜）", "《增删卜易》（清·野鹤老人）", "《卜筮正宗》（清·王洪绪）", "《黄金策》（明·刘伯温）",
+  "《火珠林》（宋·麻衣道者）", "《易隐》（清·曹九锡，黎光校注隐易千金断版）", "《易冒》（清·程良宝）",
+  "《卜筮心易妙法》（夏新仁）", "《六爻信息类象》（赵奎杰）", "《六爻速断讲义》（赵校晖）", "《筮学通考》（黎光）",
+  "《五行大义》（萧吉）", "《六爻预测走向高层次之路》（冯映彰）", "《六爻卦例说真》", "《周易与现代经济预测学》（廖墨香）",
+];
+const TAROT_CLASSICS = [
+  "《塔罗葵花宝典》（向日葵）", "《其实你已经很塔罗了》（保罗·福斯特）", "《你可以再塔罗一点》",
+  "《78度的智慧》（瑞秋·波拉克）", "《塔罗逆位精解》（玛丽·K·格瑞尔）", "《塔罗全书》（瑞秋）",
+  "《透特塔罗释义》（克劳利）", "《马赛塔罗》",
+];
 
 // 判断日期落在24节气中的哪一段（返回该段起始节气名）
 function getJieqiPeriod(date) {
@@ -512,75 +604,23 @@ function computeQimenFull(date) {
 
 const SIX_PALACES = ["大安", "留连", "速喜", "赤口", "小吉", "空亡"];
 
-// 道家小六壬：六神固定配宫、宫位五行
-const PALACE_GOD = { 大安: "青龙", 留连: "朱雀", 速喜: "腾蛇", 赤口: "白虎", 小吉: "玄武", 空亡: "勾陈" };
-const PALACE_WUXING = { 大安: "木", 留连: "土", 速喜: "火", 赤口: "金", 小吉: "水", 空亡: "土" };
-const STEM_WUXING = { 甲: "木", 乙: "木", 丙: "火", 丁: "火", 戊: "土", 己: "土", 庚: "金", 辛: "金", 壬: "水", 癸: "水" };
-const BRANCH_WUXING = { 子: "水", 丑: "土", 寅: "木", 卯: "木", 辰: "土", 巳: "火", 午: "火", 未: "土", 申: "金", 酉: "金", 戌: "土", 亥: "水" };
-
-// 六宫属性（六神/五行/方位/大意），供解读时分层取用
-const PALACE_ATTRS = {
-  大安: "六神青龙，宫五行属木，主静、稳、吉，事有安稳之象",
-  留连: "六神朱雀，宫五行属土，主拖延、纠缠、反复，事多迁延",
-  速喜: "六神腾蛇，宫五行属火，主快、喜讯、口舌信息，事有速成之机",
-  赤口: "六神白虎，宫五行属金，主口舌、是非、争执、伤害，宜防冲突",
-  小吉: "六神玄武，宫五行属水，主和合、小吉、有人相助",
-  空亡: "六神勾陈，宫五行属土，主落空、无果、阻滞，谋事多虚",
+// 六宫对应之六亲、六神、星曜等（民间通行版本，不同流派/典籍在六神分配上略有出入，仅供参考）
+const SIX_PALACE_INFO = {
+  大安: { wuxing: "木", liuqin: "父母", liushen: "青龙", star: "福星（木曜）", fangwei: "东方", renwu: "尊长、领导、老成之人", shenti: "肝胆、四肢", yingqi: "事已成形，宜静不宜动，主稳、主迟、主安" },
+  留连: { wuxing: "木", liuqin: "兄弟", liushen: "勾陈", star: "计都（缠绕星）", fangwei: "东南", renwu: "同辈、朋友，牵缠之人", shenti: "肝胆、筋络", yingqi: "事未有定论，反复拖延、纠缠不清，宜缓图不宜急进" },
+  速喜: { wuxing: "火", liuqin: "子孙", liushen: "朱雀", star: "喜神（火曜）", fangwei: "南方", renwu: "晚辈、小孩、报信之人", shenti: "心、目", yingqi: "喜讯速至，吉利迅速，问事宜速断速行" },
+  赤口: { wuxing: "金", liuqin: "官鬼", liushen: "白虎", star: "官符（金曜）", fangwei: "西方", renwu: "是非人、外人、执法者", shenti: "肺、口舌", yingqi: "口舌是非，易有争讼破财，宜忍让、防小人" },
+  小吉: { wuxing: "水", liuqin: "妻财", liushen: "六合", star: "天贵（水曜）", fangwei: "北方", renwu: "女性、朋友、贵人", shenti: "肾、耳", yingqi: "和合有情，小有财喜，多有贵人相助" },
+  空亡: { wuxing: "土", liuqin: "（诸事落空，不主六亲）", liushen: "玄武", star: "空亡星（土曜）", fangwei: "中央", renwu: "僧道、孤寡之人", shenti: "脾胃", yingqi: "落空虚耗，迟滞不吉，谋事难成，宜静候勿躁进" },
 };
 
 function computeXiaoLiuRen(lunarMonth, lunarDay, hour) {
   const hourNum = mod(Math.floor((hour + 1) / 2), 12) + 1;
-  const monthIdx = mod(lunarMonth - 1, 6);
-  const dayIdx = mod(monthIdx + (lunarDay - 1), 6);
-  const selfIdx = mod(dayIdx + (hourNum - 1), 6);
-  return { palace: SIX_PALACES[selfIdx], hourNum, selfIdx, dayIdx, monthIdx };
-}
-
-// 报数起课：数字从大安顺数落一宫（标"日"位），再从该宫按时辰序数落自身宫（标"时"位）
-function computeXiaoLiuRenByNumber(n, hour) {
-  const hourNum = mod(Math.floor((hour + 1) / 2), 12) + 1;
-  const dayIdx = mod(n - 1, 6);
-  const selfIdx = mod(dayIdx + (hourNum - 1), 6);
-  return { palace: SIX_PALACES[selfIdx], hourNum, selfIdx, dayIdx };
-}
-
-// 完整排盘：装干支（时柱落自身宫，沿宫序前行干支各进二位）+ 定六亲（以自身宫装支五行为我）
-function computeLiurenPan(selfIdx, dayIdx, hourGZ) {
-  const shengMap = { 木: "火", 火: "土", 土: "金", 金: "水", 水: "木" }; // 我生
-  const keMap = { 木: "土", 土: "水", 水: "火", 火: "金", 金: "木" }; // 我克
-  const palaces = SIX_PALACES.map((name, i) => {
-    const off = mod(i - selfIdx, 6);
-    const stem = STEMS[mod(hourGZ.stemIdx + 2 * off, 10)];
-    const branch = BRANCHES[mod(hourGZ.branchIdx + 2 * off, 12)];
-    return {
-      name,
-      god: PALACE_GOD[name],
-      wuxing: PALACE_WUXING[name],
-      stem,
-      branch,
-      stemWx: STEM_WUXING[stem],
-      branchWx: BRANCH_WUXING[branch],
-      isSelf: i === selfIdx,
-      isDay: i === dayIdx,
-    };
-  });
-  const selfWx = palaces[selfIdx].branchWx;
-  for (const p of palaces) {
-    if (p.isSelf) {
-      p.qin = "自身";
-    } else if (p.branchWx === selfWx) {
-      p.qin = "兄弟";
-    } else if (shengMap[p.branchWx] === selfWx) {
-      p.qin = "父母"; // 生我者
-    } else if (shengMap[selfWx] === p.branchWx) {
-      p.qin = "子孙"; // 我生者
-    } else if (keMap[selfWx] === p.branchWx) {
-      p.qin = "妻财"; // 我克者
-    } else {
-      p.qin = "官鬼"; // 克我者
-    }
-  }
-  return palaces;
+  let idx = mod(lunarMonth - 1, 6);
+  idx = mod(idx + (lunarDay - 1), 6);
+  idx = mod(idx + (hourNum - 1), 6);
+  const palace = SIX_PALACES[idx];
+  return { palace, hourNum, info: SIX_PALACE_INFO[palace] };
 }
 
 /* ---------------- 八卦 / 六十四卦 数据（供梅花、六爻确定性排卦） ---------------- */
@@ -776,84 +816,6 @@ function drawTarotByNumbers(nums, count) {
   return drawn;
 }
 
-/* ---------------- 组装提示词 ---------------- */
-
-function buildPrompt(systemId, question, extra) {
-  const header = `你是一位懂传统术数、但特别会跟普通人聊天的解读师。用户的提问："${question || "（没特别说，请给个整体运势的解读）"}"\n\n`;
-  const footer = `\n\n请按下面的方式回答：\n- 用大白话、口语化的中文，像朋友聊天一样，别端着，别掉书袋。\n- 专业术语（比如某个宫、某个卦、某颗星）第一次出现时，一定要顺带用一句话解释它是什么意思、代表什么，别只甩术语让人一头雾水。\n- 结构上：先简单说一句这次起出来的是什么局面，然后重点讲"这对你意味着什么"，最后给一两条具体能上手做的建议。\n- 多讲人话、讲生活里的场景，少用"吉凶祸福""气运流转"这类空泛的古文腔。\n- 语气温和、给人鼓励，不用"绝对""一定""必然"这种把话说死的词。\n- 全文控制在 400-600 字。\n- 不碰赌博、投机下注这类给明确下注指向的内容；遇到这类问题，温和地把话题引导回理性。`;
-
-  switch (systemId) {
-    case "liuren":
-      return (
-        header +
-        `已按农历 ${extra.lunarMonth} 月 ${extra.lunarDay} 日、第${extra.hourNum}个时辰（子时为1）掐指起课，落于「${extra.palace}」宫。请直接依据「${extra.palace}」宫的传统断法解读，不要重新起课或改变宫位。` +
-        footer
-      );
-    case "bazi":
-      return (
-        header +
-        `已排定四柱八字：年柱${extra.pillars.year}　月柱${extra.pillars.month}　日柱${extra.pillars.day}　时柱${extra.pillars.hour}。请直接基于这四柱指出日主五行、格局倾向，并结合提问给出解读，不要重新排盘或更改干支。` +
-        footer
-      );
-    case "qimen":
-      return (
-        header +
-        `已精确排出地盘与值符值使，以下数据均为算法算出，请直接使用，不要重新排盘：\n` +
-        `局：${extra.dunType}${extra.ju}局（节气：${extra.period}，${extra.yuanName}）\n` +
-        `地盘布局（宫位数字对应${Object.entries(PALACE_NAMES).map(([k, v]) => `${k}=${v}`).join("、")}）：` +
-        `${Object.entries(extra.diPan).map(([stem, gong]) => `${stem}在${gong}宫(${PALACE_NAMES[gong]})`).join("、")}\n` +
-        `当前时辰：${extra.hourInfo.text}（旬首：${extra.xunYi}所在${extra.baseGong}宫）\n` +
-        `值符星：${extra.zhiFuStar}，飞临${extra.zhiFuGong}宫(${PALACE_NAMES[extra.zhiFuGong]})\n` +
-        `值使门：${extra.zhiShiDoor}，行至${extra.zhiShiGong}宫(${PALACE_NAMES[extra.zhiShiGong]})\n` +
-        `请你据此补齐其余七星、七门的位置：从值符星/值使门所在宫开始，按${extra.dunType === "阳遁" ? "顺时针(1→9)" : "逆时针(9→1)"}方向，沿九星固定序（天蓬天芮天冲天辅天禽天心天柱天任天英）和八门固定序（休死伤杜景死惊开中对应门序）依次排开，中五宫寄坤二宫。再结合提问给出解读。\n\n` +
-        `断法与术语请以 ${QIMEN_CLASSICS.join("、")} 所载传统体系为准，可参考张志春《开门之悟》的现代阐释思路，配合 ${FOUNDATION_CLASSICS.join("、")} 的干支五行基础理论，避免使用与上述典籍体系相冲突的现代简化说法。` +
-        footer
-      );
-    case "meihua":
-      return (
-        header +
-        `已按梅花易数体例精确起卦，以下数据均为算法算出，请直接使用，不要重新起卦：\n` +
-        `起卦方式：${extra.method}\n` +
-        `本卦：${extra.ben.name}（上${extra.upperName}下${extra.lowerName}），第 ${extra.movePos} 爻为动爻\n` +
-        `互卦：${extra.hu.name}\n` +
-        `变卦：${extra.bian.name}\n` +
-        `体用：体卦为${extra.ti.name}(${extra.ti.element})，用卦为${extra.yong.name}(${extra.yong.element})\n` +
-        `请据此说明体用生克比和关系，参酌互卦所示中间过程、变卦所示结果趋向，再结合提问给出解读。以体卦为求测之主，用卦为所问之事。` +
-        footer
-      );
-    case "liuyao":
-      return (
-        header +
-        `已按摇钱成卦法排定卦象，以下数据均为算法算出，请直接使用，不要重新排卦：\n` +
-        `六爻（自初爻至上爻）：\n${extra.raw
-          .map((l, i) => `第${i + 1}爻：${l.label}`)
-          .join("\n")}\n` +
-        `本卦：${extra.ben.name}（上${extra.ben.upper}下${extra.ben.lower}）\n` +
-        (extra.movingPositions.length
-          ? `动爻：第 ${extra.movingPositions.join("、")} 爻；变卦：${extra.bian.name}（上${extra.bian.upper}下${extra.bian.lower}）\n`
-          : `本卦六爻皆静，无动爻、无变卦，以本卦卦辞断之\n`) +
-        (extra.sy ? `世爻在第 ${extra.sy.shi} 爻，应爻在第 ${extra.sy.ying} 爻\n` : "") +
-        `请据此说明卦名卦义、世应关系与动爻取用，结合提问解读吉凶趋向。` +
-        footer
-      );
-    case "tarot":
-      return (
-        header +
-        `抽牌结果（${extra.spreadLabel}）：\n${extra.cards
-          .map(
-            (c, i) =>
-              `${extra.positions[i] ? extra.positions[i] + "：" : ""}${c.card}（${c.reversed ? "逆位" : "正位"}）——关键词参考：${
-                c.reversed ? TAROT_MEANINGS[c.card].rev : TAROT_MEANINGS[c.card].up
-              }`
-          )
-          .join("\n")}\n请先逐张结合其牌位含义说明牌意，再综合三牌（或单牌）给出整体解读。牌义关键词仅供参照，请依提问情境灵活阐发。` +
-        footer
-      );
-    default:
-      return header + footer;
-  }
-}
-
 /* ---------------- 对话式：起局背景 + 聊天风格 ---------------- */
 
 // 聊天版的"人设 + 风格"系统提示（作为 system 传给模型，全程生效）
@@ -865,53 +827,53 @@ const CHAT_STYLE = `你是一位懂传统术数、又特别会跟普通人聊天
 - 少用"吉凶祸福""气运流转"这类空泛古文腔，多讲生活里的具体场景。
 - 如果用户的问题信息不够（比如没说清问的是谁、什么事），可以先反问一句确认，再断。
 - 全程围绕下面这一个已经起好的局面来聊，不要重新起局或改变盘面数据。
-- 不碰赌博、投机下注这类给明确下注指向的内容；遇到就温和地把话题引回理性。`;
+- 语气要自然亲切、有温度，别僵硬、别像念稿。拒绝任何请求时都客气柔和，别硬邦邦地怼回去。
+- 如果遇到涉及赌博下注、买彩票、猜球赛比分这类问题，不要生硬拒绝或说教——可以顺着卦象聊聊这件事的成败态势、顺逆倾向、谁占优，但不要给出具体的下注号码、确切比分、买哪一注这种明确指向，也温和提醒一句这类事有风险、要理性、后果自负。
+- 如果用户发来图片（聊天截图、生活照、手相面相等），结合图片内容和当前卦象一起分析当下情况；对图片里的信息就事论事地讲，涉及相术时说明仅供参考、不下绝对结论。`;
 
 // 生成某个体系"这一局的盘面背景"，作为 system 提示的一部分，让模型全程记住这个盘
-// 各体系参考书目（喂给AI作为断法依据）
-const BOOKS = {
-  liuren: "《小六壬基础与技法》、《易经开悟》（煜燊）、《小六壬入门通解》、《五行大义》（隋·萧吉）、《高级小六壬》、《祖传民间小六壬预测全集》（江春义）、《小六壬归元典藏》（慕言秋水）、《诸葛亮神通风水小六壬》、《增补万全玉匣记》、《迷信历》（清·沈亮功）、《百战奇略》（明·刘基）",
-  bazi: "《三命通会》（明·万民英）、《渊海子平》（宋·徐子平）、《穷通宝鉴》、《子平真诠》（清·沈孝瞻）、《滴天髓》、《李虚中命书》、《星平会海》，现代参考：洪丕谟《中国古代算命术》、潘昭佑《八字揭秘》、徐伟刚《子平术精析》",
-  meihua: "《梅花易数》（白话译注版，配邵雍《皇极经世》）、《宋惠彬易经系列—梅花易数/外应学》、《梅花易数入门通解》（王炳中）、《梅花心易疏证》（杨波）、《梅花易数实战详解》（黄鉴）、《周易尚氏学》（尚秉和）、《皇极经世书解》、《增删梅花易数》（民国·袁树珊）",
-  liuyao: "《古筮真诠》（朱辰彬）、《六爻入门与实战》（王虎应）、《周易预测学》（邵伟华）、《六爻详真》（曲炜）、《增删卜易》（清·野鹤老人）、《卜筮正宗》（清·王洪绪）、《黄金策》（明·刘伯温）、《火珠林》（宋·麻衣道者）、《易隐》（清·曹九锡）、《易冒》（清·程良宝）、《六爻信息类象》（赵奎杰）、《筮学通考》（黎光）",
-  tarot: "《塔罗葵花宝典》（向日葵）、《其实你已经很塔罗了》、《你可以再塔罗一点》、《78度的智慧》（瑞秋·波拉克）、《塔罗逆位精解》（玛丽·K·格瑞尔）、《塔罗全书》（瑞秋）、《透特塔罗释义》（克劳利）、《马赛塔罗》",
-};
-
-// 八字：不知出生时辰时的倒推定盘方法（喂给AI按需使用）
-const SHICHEN_DAOTUI = `若用户不清楚出生时辰：先明确告知——时柱缺失会使起运时间与部分断语不太准；可询问用户是否需要帮忙倒推时辰（定盘）。倒推分"传统特征初筛+重大事件终验"，核心是缩小范围→精准匹配：
-一、基础初筛（缩至2-3个候选时辰）：1.外貌睡姿——子午卯酉时生（方圆脸、仰睡、发旋居中、小指过指节横纹）；寅申巳亥时（长脸、侧睡、发旋偏、小指齐横纹）；辰戌丑未时（不规则脸、趴睡、双旋或偏旋、小指短于横纹）。2.性格手足——子时活泼性急、丑时热心、寅时敏感、午时暴躁；口诀"子午卯酉兄弟多，寅申巳亥两三位，辰戌丑未独一个"。3.手相痣相——时柱主晚年子女，小指长短、掌心纹路、痣位辅助。
-二、核心验证（最准）：1.用五鼠遁排出当日12个时辰的候选八字；2.对大事——升学/婚育/破财/伤病等，逐一匹配大运流年（如财星受损年破财、子女宫逢冲年生子）；3.验六亲——时柱看子女，冲克对应生育流产。
-重要：倒推所得时辰要明确告诉用户"仅供参考、不一定准确"。`;
-
 function buildCastContext(systemId, extra) {
   switch (systemId) {
     case "liuren": {
-      const panText = extra.pan
-        .map((p) => `${p.name}宫[${p.god}·宫${p.wuxing}]装${p.stem}${p.branch}(${p.stemWx}/${p.branchWx})为${p.qin}${p.isSelf ? "（自身/时位）" : ""}${p.isDay && !p.isSelf ? "（日位）" : ""}`)
-        .join("；");
+      const info = extra.info || {};
+      const dayLabel = extra.isReportedDay ? `随口报数 ${extra.lunarDay}（代入「日」）` : `农历 ${extra.lunarDay} 日`;
       return (
-        `【本局背景·小六壬（道家完整盘）】起课：${extra.mode}，自身落「${extra.palace}」宫。\n` +
-        `六宫全盘：${panText}。\n` +
-        `断法要求：以自身宫「${extra.palace}」为体（${PALACE_ATTRS[extra.palace] || ""}），结合六宫的六神、装干支、六亲、五行生克层层取象——问什么事就重点看对应六亲所落之宫（如问感情看妻财/官鬼、问长辈文书看父母、问财看妻财、问子女晚辈看子孙、问同辈竞争看兄弟），并参看该宫六神与宫位五行的作用关系。不要只报一个宫名了事，也不要改动盘面。\n` +
-        `断法与术语参照：${BOOKS.liuren}。`
+        `【本局背景·小六壬】已按农历 ${extra.lunarMonth} 月、${dayLabel}、第${extra.hourNum}个时辰（子时为1）掐指起课，落于「${extra.palace}」宫。全程依据「${extra.palace}」宫来聊，不要改变宫位、不要重新起课。\n` +
+        `「${extra.palace}」宫对应：五行${info.wuxing}，六亲主${info.liuqin}，六神${info.liushen}，星曜${info.star}，方位${info.fangwei}，多应${info.renwu}，身体应${info.shenti}。传统断意：${info.yingqi}。\n` +
+        `请把六亲、六神、星曜这些对应结合进解读里（用大白话讲清楚它们分别指什么、对这件事意味着什么），不要只甩一个孤零零的宫名就完事。断法参酌 ${LIUREN_CLASSICS.slice(0, 4).join("、")} 等传统技法。`
       );
     }
     case "bazi": {
-      let s =
-        `【本局背景·八字】已排定四柱八字：年柱${extra.pillars.year}　月柱${extra.pillars.month}　日柱${extra.pillars.day}　时柱${extra.pillars.hour}。` +
-        (extra.gender ? `性别：${extra.gender}。` : "") +
-        (extra.birthPlace && extra.birthPlace !== "未知" ? `出生地：${extra.birthPlace}。` : "") +
-        (extra.livePlace && extra.livePlace !== "未知" ? `现居地：${extra.livePlace}。` : "") +
-        `\n`;
-      if (extra.dayun) {
-        s += `大运（算法排定，${extra.dayun.forward ? "顺排" : "逆排"}，约 ${extra.dayun.qiyunYears} 岁起运，起运岁数按节气近似计算、可能有数月误差）：` +
-          extra.dayun.luck.map((l) => `${l.startAge}-${l.endAge}岁 ${l.gz}`).join("；") + `。\n`;
+      const r = extra.baziResult;
+      const p = r.pillars;
+      const hourLine = r.hourUnknown ? "时柱：未知（出生时间不确定，此柱与起运时间只作参考）" : `时柱：${p.hour}`;
+      let dayunLines;
+      if (r.dayun.unknownGender) {
+        const fmt = (yun) => yun.list.slice(0, 6).map((d) => d.index === 0 ? `（起运前，约至${d.endYear}年/${d.endAge}岁）` : `${d.ganzhi}(${d.startYear}-${d.endYear}年，${d.startAge}-${d.endAge}岁)`).join("、");
+        dayunLines = `${r.genderNote}\n按男命顺逆推：${fmt(r.dayun.male)}\n按女命顺逆推：${fmt(r.dayun.female)}`;
+      } else {
+        const fmt = r.dayun.list.slice(0, 8).map((d) => d.index === 0 ? `（起运前，约至${d.endYear}年/${d.endAge}岁）` : `${d.ganzhi}(${d.startYear}-${d.endYear}年，${d.startAge}-${d.endAge}岁)`).join("、");
+        dayunLines = `大运${r.dayun.forward ? "顺排" : "逆排"}，约${r.dayun.startYear}岁起运：${fmt}`;
       }
-      if (extra.hourUnknown) {
-        s += `注意：用户不清楚出生时辰，当前时柱按正午近似排出，仅作参考。${SHICHEN_DAOTUI}\n`;
-      }
-      s += `全程基于这四柱（日主五行、格局、十神、大运流年）来聊，不要改动干支。断法与术语参照：${BOOKS.bazi}。`;
-      return s;
+      const placeLine = (extra.birthPlace || extra.currentPlace)
+        ? `\n出生地：${extra.birthPlace || "未填"}；现居地：${extra.currentPlace || "未填"}（仅作背景参考，未做真太阳时校正）。`
+        : "";
+      let nowLine = "";
+      try {
+        const nUtc = Date.now() + (new Date().getTimezoneOffset() + 480) * 60000;
+        const cn = new Date(nUtc);
+        const cyGZ = STEMS[mod(cn.getFullYear() - 4, 10)] + BRANCHES[mod(cn.getFullYear() - 4, 12)];
+        const cur = computeBazi(cn);
+        const by = r.solarText ? parseInt(String(r.solarText).slice(0, 4), 10) : null;
+        const age = by ? (cn.getFullYear() - by + 1) : null;
+        nowLine = `\\n【当前时间参照，直接用、不要反问用户】今天${cn.getFullYear()}年${cn.getMonth() + 1}月${cn.getDate()}日，流年${cyGZ}，当前流月干支约${cur.month}${age ? `，此人现约${age}虚岁` : ""}。聊到今年/最近/现在就用这些结合大运流年来推。`;
+      } catch (e) {}
+      return (
+        `【本局背景·八字】已排定四柱：年柱${p.year}　月柱${p.month}　日柱${p.day}　${hourLine}。纳音：年${r.naYin.year}、月${r.naYin.month}、日${r.naYin.day}${r.naYin.hour ? `、时${r.naYin.hour}` : ""}。\n` +
+        `${dayunLines}\n` +
+        `全程基于这些数据（日主五行、格局、十神、大运流年）来聊，不要改动干支、不要重新排盘。${placeLine}${nowLine}\n` +
+        `断法参酌 ${BAZI_CLASSICS.slice(0, 5).join("、")} 等传统命理体系。`
+      );
     }
     case "qimen":
       return (
@@ -921,15 +883,19 @@ function buildCastContext(systemId, extra) {
         `${Object.entries(extra.diPan).map(([stem, gong]) => `${stem}在${gong}宫(${PALACE_NAMES[gong]})`).join("、")}\n` +
         `当前时辰：${extra.hourInfo.text}（旬首：${extra.xunYi}在${extra.baseGong}宫）\n` +
         `值符星：${extra.zhiFuStar}飞临${extra.zhiFuGong}宫(${PALACE_NAMES[extra.zhiFuGong]})；值使门：${extra.zhiShiDoor}行至${extra.zhiShiGong}宫(${PALACE_NAMES[extra.zhiShiGong]})\n` +
-        `其余七星七门按九星固定序（天蓬天芮天冲天辅天禽天心天柱天任天英）、八门固定序推排，中五宫寄坤二宫。断法参酌 ${QIMEN_CLASSICS.join("、")} 的传统体系。\n` +
-        `解读纪律（重要）：奇门解读必须以盘面为主——每一句判断都要落到具体的宫位、门、星、神、格局上（说清"因为什么落什么宫、组合是什么，所以断什么"），不要脱离盘面泛泛而谈，更不要变成情感安慰。安慰的话最多一两句点到即止，重心永远在据盘断事。`
+        `其余七星七门按九星固定序（天蓬天芮天冲天辅天禽天心天柱天任天英）、八门固定序推排，中五宫寄坤二宫。断法参酌 ${QIMEN_CLASSICS.join("、")} 的传统体系。\n\n` +
+        `【奇门遁甲专用断法要求——务必遵守】\n` +
+        `- 奇门遁甲以盘断事，不是聊天讲道理。这一局怎么答，答案必须从值符值使、九星八门、宫位生克、三奇六仪里面找，不是从「人生道理」「情绪安慰」里面找。\n` +
+        `- 每一句实质性的话都要挂靠到具体的盘面元素上（某星临某宫、某门旺衰、值符值使的位置关系等），不能脱离盘面讲空泛的大道理或纯安慰话。\n` +
+        `- 安慰、鼓励类的话最多一两句意思一下就行，不要占篇幅、不要成为回答的重心；重心永远是把这局盘讲清楚、讲透。\n` +
+        `- 多轮追问时也要一直扣着这一局的盘面元素回答，不要聊着聊着就脱离盘面变成通用的心灵鸡汤或人生建议。`
       );
     case "meihua":
       return (
         `【本局背景·梅花易数】以下为算法精确起出的卦，全程据此聊，不要重新起卦：\n` +
         `起卦方式：${extra.method}；本卦：${extra.ben.name}（上${extra.upperName}下${extra.lowerName}），第 ${extra.movePos} 爻动；互卦：${extra.hu.name}；变卦：${extra.bian.name}\n` +
         `体用：体卦${extra.ti.name}(${extra.ti.element})，用卦${extra.yong.name}(${extra.yong.element})。以体为求测之主、用为所问之事，看体用生克比和，参酌互卦（过程）、变卦（结果）。\n` +
-        `断法与术语参照：${BOOKS.meihua}。`
+        `断法参酌 ${MEIHUA_CLASSICS.slice(0, 5).join("、")} 等传统体例。`
       );
     case "liuyao":
       return (
@@ -940,7 +906,7 @@ function buildCastContext(systemId, extra) {
           ? `动爻：第 ${extra.movingPositions.join("、")} 爻；变卦：${extra.bian.name}（上${extra.bian.upper}下${extra.bian.lower}）\n`
           : `六爻皆静，无动爻变卦，以本卦断\n`) +
         (extra.sy ? `世爻在第 ${extra.sy.shi} 爻，应爻在第 ${extra.sy.ying} 爻\n` : "") +
-        `按卦名卦义、世应关系与动爻取用来断。断法与术语参照：${BOOKS.liuyao}。`
+        `按卦名卦义、世应关系与动爻取用来断。断法参酌 ${LIUYAO_CLASSICS.slice(0, 5).join("、")} 等传统技法。`
       );
     case "tarot":
       return (
@@ -951,7 +917,7 @@ function buildCastContext(systemId, extra) {
                 c.reversed ? TAROT_MEANINGS[c.card].rev : TAROT_MEANINGS[c.card].up
               }`
           )
-          .join("\n")}\n结合牌位与牌义来聊，关键词仅供参照，依情境灵活阐发。解读参照：${BOOKS.tarot}。`
+          .join("\n")}\n结合牌位与牌义来聊，关键词仅供参照，依情境灵活阐发。断法参酌 ${TAROT_CLASSICS.slice(0, 5).join("、")} 等塔罗体系。`
       );
     default:
       return "";
@@ -1031,38 +997,15 @@ const DESIGN_CSS = `
 .bubble.me .bubble-body{background:#fff;color:var(--ink);border:1px solid var(--line2);border-bottom-right-radius:5px}
 .bubble.bot .bubble-body{background:var(--ink);color:#F5EFE3;border-bottom-left-radius:5px}
 .bubble-body.typing{color:#C9B896;font-style:normal}
-.chat-input{display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 10px 10px 16px;box-shadow:0 6px 24px rgba(58,42,26,.10)}
+.chat-input{position:sticky;bottom:12px;z-index:5;display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 10px 10px 16px;box-shadow:0 6px 24px rgba(58,42,26,.18)}
 .chat-box{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15px;line-height:1.6;color:var(--ink);resize:none;max-height:140px}
 .send-btn{flex:0 0 auto;background:var(--ink);color:#fff;border:0;border-radius:10px;padding:11px 20px;font-size:14px;cursor:pointer;transition:opacity .18s}
 .send-btn:disabled{opacity:.4;cursor:default}
-.hist-overlay{position:fixed;inset:0;background:rgba(20,15,8,.45);z-index:50;display:flex;align-items:stretch;justify-content:flex-start}
-.hist-panel{background:var(--canvas);width:82%;max-width:340px;height:100%;display:flex;flex-direction:column;box-shadow:8px 0 40px rgba(0,0,0,.25);animation:slideIn .22s ease-out}
-@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-.hist-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line2);font-family:var(--serif);font-size:15px;color:var(--ink)}
-.hist-close{background:none;border:0;font-size:16px;color:var(--ink-sub);cursor:pointer;padding:4px 8px}
-.hist-new{margin:12px 12px 4px;background:var(--ink);color:#fff;border:0;border-radius:10px;padding:11px 0;font-size:14px;cursor:pointer;width:calc(100% - 24px)}
-.hist-empty{padding:36px 20px;text-align:center;color:var(--ink-sub);font-size:14px}
-.hist-count{padding:10px 18px 2px;font-size:11px;color:var(--ink-sub)}
-.hist-list{overflow-y:auto;padding:4px 12px 20px;flex:1}
-.hist-item{display:flex;align-items:stretch;gap:8px;margin-top:8px}
-.hist-main{flex:1;text-align:left;background:var(--card);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;cursor:pointer;font:inherit;color:inherit;min-width:0}
-.hist-item.cur .hist-main{border-color:var(--gold-txt);background:var(--gold-bg)}
-.hist-sys{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--gold-txt)}
-.hist-title{font-size:13.5px;color:var(--ink);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hist-time{font-size:10.5px;color:var(--ink-sub);margin-top:4px}
-.hist-del{flex:0 0 auto;background:none;border:1px solid var(--line2);border-radius:10px;color:var(--verm);font-size:12px;padding:0 10px;cursor:pointer}
-.menu-btn{position:fixed;top:14px;left:14px;z-index:40;background:var(--card);border:1px solid var(--line2);border-radius:10px;width:42px;height:42px;font-size:18px;color:var(--ink);cursor:pointer;box-shadow:0 4px 16px rgba(58,42,26,.15);display:flex;align-items:center;justify-content:center}
-.lr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
-.lr-cell{background:rgba(255,252,245,.96);border:1px solid rgba(216,184,120,.5);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;color:#2A251E}
-.lr-cell.self{outline:2px solid #C0504D;outline-offset:-2px}
-.lr-top{display:flex;justify-content:space-between;align-items:center;padding:7px 9px 0;font-size:12px;font-weight:600}
-.lr-mark{font-size:10px;color:#C0504D}
-.lr-gz{padding:5px 9px 0;font-size:13px;font-family:var(--serif)}
-.lr-gz em{font-style:normal;font-size:10px;color:#8B7355}
-.lr-qin{padding:3px 9px 0;font-size:11px;color:#6B5440;text-align:right}
-.lr-name{padding:2px 9px 6px;font-size:13px;font-family:var(--serif);font-weight:600}
-.lr-wx{margin-top:auto;text-align:center;color:#fff;font-size:11px;padding:3px 0;letter-spacing:.3em}
-@media(max-width:520px){.lr-gz{font-size:12px}.lr-cell{min-width:0}}
+.img-btn{flex:0 0 auto;background:none;border:0;font-size:22px;cursor:pointer;padding:4px 6px;align-self:center}
+.bubble-img{max-width:180px;max-height:220px;border-radius:12px;margin-bottom:6px;display:block;object-fit:cover}
+.img-preview{display:flex;align-items:center;gap:10px;margin-bottom:8px;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:8px 10px}
+.img-preview img{width:52px;height:52px;object-fit:cover;border-radius:8px}
+.img-preview button{background:none;border:1px solid var(--line2);border-radius:8px;color:var(--verm);font-size:12px;padding:5px 10px;cursor:pointer}
 .sys.sel .no{color:var(--gold-lt2)} .sys.sel .sym{color:var(--gold-lt);opacity:.85} .sys.sel .nm{color:#FBF3E2} .sys.sel .st{color:var(--gold-lt)} .sys.sel .ds{color:var(--cream-dim)}
 .chip-sel{display:inline-block;align-self:flex-start;background:var(--jade);color:#fff;font-family:var(--mono);font-size:10px;border-radius:3px;padding:2px 8px;letter-spacing:.06em;margin-top:12px}
 .intro{font-size:13px;line-height:1.85;color:var(--ink-sub);border-left:3px solid var(--gold);background:var(--gold-bg);padding:12px 16px;border-radius:0 6px 6px 0;margin:0 0 22px}
@@ -1075,6 +1018,10 @@ const DESIGN_CSS = `
 .qbox{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:11px 12px;font-family:var(--sans);font-size:13.5px;color:var(--ink2);outline:none;resize:vertical;min-height:104px;box-sizing:border-box}
 .qbox:focus,.fin:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,146,74,.12)}
 .fin{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;color:var(--ink2);outline:none;box-sizing:border-box}
+.selbox{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;color:var(--ink2);outline:none;box-sizing:border-box;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238A6D38'><path d='M5.5 7.5l4.5 4.5 4.5-4.5z'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.selbox:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,146,74,.12)}
+.spread-positions{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.pos-chip{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--gold-txt);background:var(--gold-bg);border-radius:3px;padding:3px 8px}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .callout{border-radius:7px;padding:13px 16px;font-size:12.5px;line-height:1.75}
 .callout .lab{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:5px}
@@ -1082,8 +1029,22 @@ const DESIGN_CSS = `
 .callout.gold{background:var(--gold-bg);border-left:3px solid var(--gold)} .callout.gold .lab{color:var(--gold-txt)} .callout.gold .bd{color:#5f4c24}
 .callout.verm{background:var(--verm-bg);border-left:3px solid var(--verm)} .callout.verm .lab{color:var(--verm)} .callout.verm .bd{color:#7a3830}
 .spread{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.spread.c3{grid-template-columns:1fr 1fr 1fr}
 .spread button{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border-radius:7px;padding:12px 10px;background:var(--card2);border:1px solid var(--line2);color:var(--ink-sub);cursor:pointer;transition:.15s}
 .spread button.on{background:var(--coffee);color:var(--cream);border-color:var(--coffee)}
+.ymdrow{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.checkline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-sub);cursor:pointer;user-select:none}
+.checkline input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
+.shichen{margin-top:10px;padding:16px;background:var(--card2);border:1px dashed var(--line2);border-radius:8px}
+.shichen-groups{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.shichen-card{text-align:left;background:var(--card);border:1px solid var(--line2);border-radius:7px;padding:12px 14px;cursor:pointer;transition:.15s}
+.shichen-card:hover{background:var(--card3);border-color:var(--gold)}
+.shichen-cands{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.shichen-cand{text-align:left;background:var(--card);border:1px solid var(--line2);border-radius:7px;padding:12px 14px;cursor:pointer;transition:.15s}
+.shichen-cand:hover{background:var(--card3);border-color:var(--gold)}
+.sc-title{font-family:var(--serif);font-weight:700;font-size:14px;color:var(--ink);margin-bottom:6px}
+.sc-line{font-size:12px;color:var(--ink-sub);line-height:1.7}
+.sc-pick{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--gold-txt);margin-top:6px}
 .btn{width:100%;background:var(--gold);color:var(--card);border:0;border-radius:7px;padding:13px;font-family:var(--serif);font-weight:700;font-size:15px;letter-spacing:.3em;box-shadow:0 6px 22px -14px rgba(58,42,26,.7);cursor:pointer;transition:filter .15s,opacity .15s}
 .btn:hover{filter:brightness(.96)} .btn:disabled{opacity:.6;cursor:default}
 .btn.ghost{background:transparent;color:var(--gold-txt);border:1px solid var(--gold);box-shadow:none;letter-spacing:.2em;font-size:13px;width:auto;padding:11px 22px}
@@ -1128,6 +1089,13 @@ const DESIGN_CSS = `
 .acc-body li{font-size:12.5px;line-height:1.8;color:var(--ink3);margin-bottom:4px}
 .sixlist{display:grid;grid-template-columns:1fr 1fr;gap:3px 24px;list-style:none;padding:0!important;margin:0}
 .sixlist li{margin:0}.sixlist .n{font-family:var(--serif);font-weight:700;color:var(--ink)}.sixlist .s{color:var(--mono-label)}
+.history-list{display:flex;flex-direction:column;gap:10px}
+.history-item summary .hint{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--mono-label);font-weight:400;text-transform:none}
+.hist-msg{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.hist-msg:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+.hist-role{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-txt);margin-bottom:4px}
+.hist-role.bot{color:var(--jade)}
+.hist-content{font-size:13px;line-height:1.75;color:var(--ink3);white-space:pre-wrap}
 .foot-note{text-align:center;font-size:11px;color:var(--ink-sub);opacity:.75;max-width:470px;margin:16px auto 24px;line-height:1.7}
 @media(max-width:820px){
   .hero{padding:36px 28px 32px}
@@ -1149,6 +1117,8 @@ const DESIGN_CSS = `
   h1{font-size:40px !important;word-break:break-word}
   .spread{flex-wrap:wrap}
   .spread button{flex:1 1 auto}
+  .ymdrow{grid-template-columns:1fr 1fr;grid-template-areas:"y y" "m d"}
+  .ymdrow input:first-child{grid-area:y}
 }
 .page,.wrap,.hero,.section,.castbar,.form-card,.result,.chat,.chat-input,.bubble{max-width:100%;overflow-wrap:break-word}
 .datarow .dv{overflow-wrap:break-word;min-width:0}
@@ -1236,60 +1206,139 @@ function MiniHex({ raw }) {
   );
 }
 
-/* ---------------- 本地历史记录（存在浏览器 localStorage，仅本设备） ---------------- */
-const HISTORY_KEY = "fujiatianxia_history_v1";
+// 时辰倒推定盘向导：外貌/睡姿/性格初筛缩小到一个地支组，再从4个候选时辰里对比大运/流年选定一个
+function ShichenWizard({ calendar, year, month, day, isLeapMonth, gender, groupKey, onPickGroup, onConfirmHour, onBackToGroup }) {
+  if (!groupKey) {
+    return (
+      <div className="shichen">
+        <Callout tone="gold" label="第一步 · 外貌与性格初筛">先看看自己更符合下面哪一组的描述（大致判断即可，不必精确）：</Callout>
+        <div className="shichen-groups">
+          {Object.entries(SHICHEN_GROUPS).map(([key, g]) => (
+            <button key={key} type="button" className="shichen-card" onClick={() => onPickGroup(key)}>
+              <div className="sc-title">{g.label}</div>
+              <div className="sc-line"><b>外貌/睡姿：</b>{g.appearance}</div>
+              <div className="sc-line"><b>性格/排行：</b>{g.personality}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const group = SHICHEN_GROUPS[groupKey];
+  let candidates = [];
+  try {
+    candidates = buildShichenCandidates(calendar, year, month, day, isLeapMonth, group.branches, gender || "unknown");
+  } catch (e) {
+    return <Callout tone="verm" label="出错了">候选推算失败，检查一下出生年月日是否填写正确。</Callout>;
+  }
+
+  return (
+    <div className="shichen">
+      <Callout tone="gold" label="第二步 · 核心验证">
+        已初筛到「{group.label}」，共 {candidates.length} 个候选时辰。请回想人生中的重大节点（升学、结婚、生育、破财、重大伤病等发生的年份），对照下面各候选时辰推出的大运/流年，看哪个更吻合，再选定一个——这一步无法保证精确，仅供参考。
+      </Callout>
+      <div className="shichen-cands">
+        {candidates.map((c) => {
+          const r = c.result;
+          const dayun = r.dayun.unknownGender ? r.dayun.male : r.dayun;
+          const dayunPreview = dayun.list.slice(1, 4).map((d) => `${d.ganzhi}(${d.startAge}-${d.endAge}岁)`).join("、");
+          return (
+            <button key={c.branch} type="button" className="shichen-cand" onClick={() => onConfirmHour(c.branch, c.hour)}>
+              <div className="sc-title">{c.branch}时（约 {String(c.hour).padStart(2, "0")}:00-{String((c.hour + 2) % 24).padStart(2, "0")}:00）</div>
+              <div className="sc-line">时柱：<span className="ser">{r.pillars.hour}</span></div>
+              <div className="sc-line">大运预览：{dayunPreview}</div>
+              <div className="sc-pick">选这个时辰 →</div>
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" className="btn ghost" style={{ marginTop: 12 }} onClick={onBackToGroup}>← 重新选一组</button>
+    </div>
+  );
+}
+
+/* ---------------- 历史记录（本地存储，不经过任何服务器） ---------------- */
+
+const HISTORY_KEY = "fzt_history_v1";
+const HISTORY_LIMIT = 500;
 
 function loadHistory() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
     return [];
   }
 }
-
 function saveHistory(list) {
-  // 上限500条；若浏览器存储已满，自动删掉最旧的再试，保证新记录不静默丢失
-  let arr = list.slice(0, 500);
+  let arr = list.slice(0, HISTORY_LIMIT);
   for (let attempt = 0; attempt < 6; attempt++) {
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
       return;
-    } catch {
+    } catch (e) {
       if (arr.length <= 1) return;
-      arr = arr.slice(0, Math.max(1, Math.floor(arr.length * 0.8))); // 删掉最旧20%再试
+      arr = arr.slice(0, Math.max(1, Math.floor(arr.length * 0.8)));
     }
   }
 }
-
-function makeId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function fmtHistoryTime(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+// 按体系生成历史列表里的一行简介
+function castSummaryFor(systemId, cast) {
+  if (!cast) return "";
+  switch (systemId) {
+    case "bazi": {
+      const p = cast.baziResult.pillars;
+      return `${p.year} ${p.month} ${p.day} ${p.hour || "时辰未知"}`;
+    }
+    case "liuren":
+      return `落「${cast.palace}」宫`;
+    case "meihua":
+      return `本卦 ${cast.ben.name}`;
+    case "liuyao":
+      return `本卦 ${cast.ben.name}${cast.bian ? `，变卦 ${cast.bian.name}` : ""}`;
+    case "qimen":
+      return `${cast.dunType}${cast.ju}局`;
+    case "tarot":
+      return cast.spreadLabel || "";
+    default:
+      return "";
+  }
 }
 
 /* ---------------- 主组件 ---------------- */
 
 function AppInner() {
   const [selected, setSelected] = useState(null);
-  const [birthDate, setBirthDate] = useState("");
-  const [birthTime, setBirthTime] = useState("");
-  const [calType, setCalType] = useState("solar"); // solar新历 | lunar农历
-  const [lunarY, setLunarY] = useState("");
-  const [lunarM, setLunarM] = useState("");
-  const [lunarD, setLunarD] = useState("");
-  const [gender, setGender] = useState("");
-  const [birthPlace, setBirthPlace] = useState("");
-  const [livePlace, setLivePlace] = useState("");
-  const [hourUnknown, setHourUnknown] = useState(false);
   const [numbers, setNumbers] = useState("");
-  const [lunarMonth, setLunarMonth] = useState("");
-  const [lunarDay, setLunarDay] = useState("");
   const [tarotSpread, setTarotSpread] = useState("overall"); // 牌阵key
   const [tarotDrawMode, setTarotDrawMode] = useState("random"); // random | numbers
   const [tarotNumbers, setTarotNumbers] = useState(""); // 报数字起牌
   const [liurenMode, setLiurenMode] = useState("time"); // time时间起课 | numbers报数起课
-  const [liurenNumbers, setLiurenNumbers] = useState(""); // 报数起课的三个数
+  const [liurenNumbers, setLiurenNumbers] = useState(""); // 报数起课：只需一个数字（代入「日」，月/时辰仍按当下真实农历）
+
+  // 八字资料
+  const [baziCalendar, setBaziCalendar] = useState("solar"); // solar新历 | lunar农历
+  const [baziYear, setBaziYear] = useState("");
+  const [baziMonth, setBaziMonth] = useState("");
+  const [baziDay, setBaziDay] = useState("");
+  const [baziLeapMonth, setBaziLeapMonth] = useState(false);
+  const [baziHour, setBaziHour] = useState("");
+  const [baziMinute, setBaziMinute] = useState("");
+  const [baziHourUnknown, setBaziHourUnknown] = useState(false);
+  const [baziGender, setBaziGender] = useState(""); // male | female | ""(未知)
+  const [baziBirthPlace, setBaziBirthPlace] = useState("");
+  const [baziCurrentPlace, setBaziCurrentPlace] = useState("");
+  // 时辰倒推定盘（出生时间不确定时的辅助向导）
+  const [shichenOpen, setShichenOpen] = useState(false);
+  const [shichenGroupKey, setShichenGroupKey] = useState(""); // 初筛选中的地支组
+  const [shichenFinalHour, setShichenFinalHour] = useState(""); // 最终选定的候选时辰（地支）
 
   // 对话式状态
   const [phase, setPhase] = useState("home"); // home | setup | chat  （setup 仅八字/小六壬需要）
@@ -1297,62 +1346,34 @@ function AppInner() {
   const [castInfo, setCastInfo] = useState(null); // 用于顶部展示算法排盘
   const [messages, setMessages] = useState([]); // [{role:'user'|'assistant', content}]
   const [input, setInput] = useState("");
+  const [pendingImage, setPendingImage] = useState(null); // {dataUrl, mediaType, data}
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const chatEndRef = useRef(null);
 
-  // 历史记录（本地）
-  const [history, setHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [currentRecordId, setCurrentRecordId] = useState(null);
+  // 历史记录（本地存储）
+  const [historyList, setHistoryList] = useState(loadHistory);
+  const currentHistoryRef = useRef(null); // 当前这一局对应的历史记录条目（不含最新messages，发消息时再补上）
 
-  // 首次加载读取本地历史
-  useEffect(() => {
-    setHistory(loadHistory());
-  }, []);
-
-  // 保存/更新当前这条问卜记录到本地
-  function persistRecord(recId, sel, cInfo, cContext, msgs) {
-    if (!recId || !msgs || msgs.length === 0) return;
-    const firstQ = msgs.find((m) => m.role === "user");
-    const rec = {
-      id: recId,
-      system: sel,
-      systemName: (SYSTEMS.find((s) => s.id === sel) || {}).name || sel,
-      castInfo: cInfo,
-      castContext: cContext,
-      messages: msgs,
-      title: firstQ ? firstQ.content.slice(0, 30) : "（未命名）",
-      updatedAt: Date.now(),
-    };
-    setHistory((prev) => {
-      const others = prev.filter((r) => r.id !== recId);
-      const next = [rec, ...others];
+  function upsertHistory(entry) {
+    setHistoryList((prev) => {
+      const idx = prev.findIndex((e) => e.id === entry.id);
+      const next = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [entry, ...prev];
       saveHistory(next);
       return next;
     });
   }
-
-  function deleteRecord(recId) {
-    setHistory((prev) => {
-      const next = prev.filter((r) => r.id !== recId);
+  function deleteHistoryEntry(id) {
+    setHistoryList((prev) => {
+      const next = prev.filter((e) => e.id !== id);
       saveHistory(next);
       return next;
     });
   }
-
-  // 从历史恢复一条记录，回到那次对话
-  function openRecord(rec) {
-    setSelected(rec.system);
-    setCastInfo(rec.castInfo);
-    setCastContext(rec.castContext || "");
-    setMessages(rec.messages || []);
-    setCurrentRecordId(rec.id);
-    setShowHistory(false);
-    setError("");
-    setLoading(false);
-    setInput("");
-    setPhase("chat");
+  function clearAllHistory() {
+    setHistoryList([]);
+    saveHistory([]);
   }
 
   // 需要先填资料/选项的体系
@@ -1360,37 +1381,38 @@ function AppInner() {
 
   function resetForm(id) {
     setSelected(id);
-    setBirthDate("");
-    setBirthTime("");
-    setCalType("solar");
-    setLunarY("");
-    setLunarM("");
-    setLunarD("");
-    setGender("");
-    setBirthPlace("");
-    setLivePlace("");
-    setHourUnknown(false);
     setNumbers("");
-    setLunarMonth("");
-    setLunarDay("");
     setTarotSpread("overall");
     setTarotDrawMode("random");
     setTarotNumbers("");
     setLiurenMode("time");
     setLiurenNumbers("");
+    setBaziCalendar("solar");
+    setBaziYear("");
+    setBaziMonth("");
+    setBaziDay("");
+    setBaziLeapMonth(false);
+    setBaziHour("");
+    setBaziMinute("");
+    setBaziHourUnknown(false);
+    setBaziGender("");
+    setBaziBirthPlace("");
+    setBaziCurrentPlace("");
+    setShichenOpen(false);
+    setShichenGroupKey("");
+    setShichenFinalHour("");
     setCastContext("");
     setCastInfo(null);
     setMessages([]);
     setInput("");
     setError("");
     setLoading(false);
-    setCurrentRecordId(null);
     if (id == null) {
       setPhase("home");
     } else if (NEEDS_SETUP[id]) {
       setPhase("setup"); // 先填资料/选项
     } else if (id === "qimen" || id === "liuyao") {
-      // 奇门/六爻：不立即起局，先进对话，等用户发第一句话时再起盘/摇卦
+      // 奇门/六爻：不立即起局，先进对话，等用户发第一句话（问出具体的事）再起盘/摇卦
       setPhase("chat");
     } else {
       startCast(id, {});
@@ -1405,70 +1427,46 @@ function AppInner() {
     let cast = null;
 
     if (id === "bazi") {
-      // 出生日期：新历直接用；农历先转公历
-      let birthDateTime = null;
-      if (opts.calType === "lunar") {
-        const base = lunarToSolarDate(Number(opts.lunarY), Number(opts.lunarM), Number(opts.lunarD));
-        if (!base) {
-          setError("农历转换失败，请检查农历年月日，或改用新历输入");
-          return null;
-        }
-        const hh = opts.hourUnknown ? 12 : parseInt((opts.birthTime || "12:00").split(":")[0], 10);
-        birthDateTime = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hh, 0, 0);
-      } else {
-        birthDateTime = new Date(`${opts.birthDate}T${opts.hourUnknown ? "12:00" : (opts.birthTime || "12:00")}`);
-      }
-      const pillars = computeBazi(birthDateTime);
-      extra.pillars = pillars;
-      extra.gender = opts.gender || "";
-      extra.birthPlace = opts.birthPlace || "";
-      extra.livePlace = opts.livePlace || "";
-      extra.hourUnknown = !!opts.hourUnknown;
-      // 大运：有性别才能定顺逆
-      if (opts.gender === "男" || opts.gender === "女") {
-        extra.dayun = computeDaYun(birthDateTime, pillars, opts.gender);
-      }
-      cast = {
-        type: "bazi",
-        text: `${pillars.year} ${pillars.month} ${pillars.day} ${pillars.hour}${extra.hourUnknown ? "（时辰未知，按午时近似）" : ""}`,
-        dayun: extra.dayun || null,
-        gender: extra.gender,
-      };
+      const baziResult = computeBaziPrecise({
+        calendar: opts.baziCalendar,
+        year: opts.baziYear,
+        month: opts.baziMonth,
+        day: opts.baziDay,
+        isLeapMonth: opts.baziLeapMonth,
+        hour: opts.baziHour,
+        minute: opts.baziMinute,
+        hourUnknown: opts.baziHourUnknown,
+        gender: opts.baziGender || "unknown",
+      });
+      extra.baziResult = baziResult;
+      extra.birthPlace = opts.baziBirthPlace;
+      extra.currentPlace = opts.baziCurrentPlace;
+      const p = baziResult.pillars;
+      cast = { type: "bazi", baziResult, text: `${p.year} ${p.month} ${p.day} ${p.hour || "未知"}` };
     } else if (id === "liuren") {
-      // 取中国时间的当前时辰干支（装干支用）
-      const nowUtcMs = now.getTime() + (now.getTimezoneOffset() + 480) * 60000;
-      const chinaNow = new Date(nowUtcMs);
-      const hourGZ = getHourGanZhi(getDayGanZhi(chinaNow).stemIdx, chinaNow.getHours());
-      let castRes;
-      let modeLabel;
+      // 月与时辰始终按当下中国时间真实换算（避免用户自填农历对不上）；
+      // 「报数起课」时只需报一个数字，作为「日」的替代（民间掐指速断常见做法：随口报一数配合当下时辰）
+      const lu = getChinaLunarNow();
+      const lm = lu.lunarMonth;
+      let ld, isReportedDay;
       if (opts.liurenMode === "numbers") {
-        const n = parseInt((opts.liurenNumbers || "").replace(/[^0-9]/g, ""), 10);
-        if (!n || n < 1) {
-          setError("报数起课要填一个大于0的数字哈");
-          return null;
-        }
-        castRes = computeXiaoLiuRenByNumber(n, chinaNow.getHours());
-        modeLabel = `报数起课（${n} + ${hourGZ.text}时）`;
-        extra.number = n;
-        extra.byNumber = true;
+        const ns = (opts.liurenNumbers || "").split(/[^0-9]+/).filter(Boolean).map(Number);
+        ld = ns[0] || 1;
+        isReportedDay = true;
       } else {
-        const lu = getChinaLunarNow();
-        if (!lu.ok) {
-          setError("农历换算暂时不可用，请改用「报数起课」");
-          return null;
-        }
-        castRes = computeXiaoLiuRen(lu.lunarMonth, lu.lunarDay, lu.chinaHour);
-        modeLabel = `时间起课（农历${lu.lunarMonth}月${lu.lunarDay}日 ${hourGZ.text}时）`;
-        extra.lunarMonth = lu.lunarMonth;
-        extra.lunarDay = lu.lunarDay;
+        ld = lu.lunarDay;
+        isReportedDay = false;
       }
-      const pan = computeLiurenPan(castRes.selfIdx, castRes.dayIdx, hourGZ);
-      extra.palace = castRes.palace;
-      extra.hourNum = castRes.hourNum;
-      extra.pan = pan;
-      extra.hourGZ = hourGZ.text;
-      extra.mode = modeLabel;
-      cast = { type: "liuren", palace: castRes.palace, hourNum: castRes.hourNum, mode: modeLabel, pan, hourGZ: hourGZ.text, lunarMonth: extra.lunarMonth, lunarDay: extra.lunarDay, number: extra.number };
+      const hourForCast = lu.chinaHour;
+      const { palace, hourNum, info } = computeXiaoLiuRen(Number(lm), Number(ld), hourForCast);
+      extra.lunarMonth = Number(lm);
+      extra.lunarDay = Number(ld);
+      extra.hourNum = hourNum;
+      extra.palace = palace;
+      extra.info = info;
+      extra.isReportedDay = isReportedDay;
+      extra.mode = isReportedDay ? "报数起课（随口报一数代入「日」，月与时辰仍按当下农历真实换算）" : "时间起课（按当下中国时间自动取农历月、日、时辰）";
+      cast = { type: "liuren", palace, hourNum, info, mode: extra.mode, lunarMonth: lm, lunarDay: ld, isReportedDay };
     } else if (id === "meihua") {
       const mh = computeMeihua(opts.numbers || numbers, now);
       Object.assign(extra, mh);
@@ -1507,27 +1505,37 @@ function AppInner() {
       setMessages([]);
       setPhase("chat");
     }
-    return { ctx, cast };
+
+    // 记入本地历史（新起一局＝新建一条历史记录）
+    const hid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const historyEntry = {
+      id: hid,
+      systemId: id,
+      systemName: (SYSTEMS.find((s) => s.id === id) || {}).name || id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      castSummary: castSummaryFor(id, cast),
+      castInfo: cast,
+      messages: [],
+    };
+    currentHistoryRef.current = historyEntry;
+    upsertHistory(historyEntry);
+
+    return ctx;
   }
 
   // 提交 setup（八字/小六壬）资料
   function handleSetupSubmit() {
-    if (selected === "bazi") {
-      if (calType === "solar" && !birthDate) {
-        setError("先填一下出生日期哈");
-        return;
-      }
-      if (calType === "lunar" && (!lunarY || !lunarM || !lunarD)) {
-        setError("农历要填年、月、日三个数哈");
-        return;
-      }
-      if (!gender) {
-        setError("选一下性别哈（排大运要用）");
-        return;
-      }
+    if (selected === "bazi" && (!baziYear || !baziMonth || !baziDay)) {
+      setError("先把出生年、月、日填完整哈");
+      return;
+    }
+    if (selected === "bazi" && !baziHourUnknown && baziHour === "") {
+      setError("填一下出生时间，不清楚的话勾选「不确定具体时间」即可");
+      return;
     }
     if (selected === "liuren" && liurenMode === "numbers" && !liurenNumbers.trim()) {
-      setError("报数起课要先报一个数字哈");
+      setError("报数起课先随口报一个数字哈");
       return;
     }
     if (selected === "tarot" && tarotDrawMode === "numbers" && !tarotNumbers.trim()) {
@@ -1535,8 +1543,8 @@ function AppInner() {
       return;
     }
     startCast(selected, {
-      birthDate, birthTime, calType, lunarY, lunarM, lunarD,
-      gender, birthPlace: birthPlace.trim() || "未知", livePlace: livePlace.trim() || "未知", hourUnknown,
+      baziCalendar, baziYear, baziMonth, baziDay, baziLeapMonth,
+      baziHour, baziMinute, baziHourUnknown, baziGender, baziBirthPlace, baziCurrentPlace,
       liurenMode, liurenNumbers,
       numbers,
       tarotSpread, tarotDrawMode, tarotNumbers,
@@ -1546,27 +1554,33 @@ function AppInner() {
   // 发送一条对话消息
   async function sendMessage() {
     const text = input.trim();
-    if (!text || loading) return;
+    if ((!text && !pendingImage) || loading) return;
     setError("");
     setInput("");
+    const img = pendingImage;
+    setPendingImage(null);
 
-    // 奇门/六爻：如果还没起盘（进页面没自动起），现在起
+    // 奇门遁甲/六爻：如果还没起盘（进页面没自动起），现在才按用户问出的这一刻起盘/摇卦
     let effectiveContext = castContext;
-    let effectiveCast = castInfo;
     if ((selected === "qimen" || selected === "liuyao") && !castContext) {
-      const r = startCast(selected, { keepMessages: true });
-      if (r == null) return; // 起局失败（已提示错误）
-      effectiveContext = r.ctx;
-      effectiveCast = r.cast;
+      effectiveContext = startCast(selected, { keepMessages: true });
     }
 
-    const nextMessages = [...messages, { role: "user", content: text }];
+    // 发给API的消息：带图则用数组格式（Anthropic图片格式）
+    const apiUserContent = img
+      ? [
+          ...(text ? [{ type: "text", text }] : [{ type: "text", text: "请结合这张图片和当前卦象，帮我看看。" }]),
+          { type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } },
+        ]
+      : text;
+    // 存历史/显示用：图片存为可展示的标记
+    const displayContent = img ? (text ? text + "　[图片]" : "[图片]") : text;
+
+    const apiMessages = [...messages.map((m) => ({ role: m.role, content: m.contentApi || m.content })), { role: "user", content: apiUserContent }];
+    const nextMessages = [...messages, { role: "user", content: displayContent, contentApi: apiUserContent, img: img ? img.dataUrl : null }];
     setMessages(nextMessages);
     setLoading(true);
-
-    // 确定这条问卜的记录id（新对话则创建）
-    const recId = currentRecordId || makeId();
-    if (!currentRecordId) setCurrentRecordId(recId);
+    persistMessages(nextMessages);
 
     try {
       const response = await fetch("/api/reading", {
@@ -1574,7 +1588,7 @@ function AppInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           system: CHAT_STYLE + "\n\n" + effectiveContext,
-          messages: nextMessages,
+          messages: apiMessages,
         }),
       });
       const rawText = await response.text();
@@ -1587,18 +1601,39 @@ function AppInner() {
       if (!response.ok || data.error) {
         throw new Error(data.error || `HTTP ${response.status}`);
       }
-      const reply = data.text || "（这一卦一时看不真切，换个说法再问问？）";
-      const finalMessages = [...nextMessages, { role: "assistant", content: reply }];
+      const finalMessages = [...nextMessages, { role: "assistant", content: data.text || "（这一卦一时看不真切，换个说法再问问？）" }];
       setMessages(finalMessages);
-      // 保存到本地历史
-      persistRecord(recId, selected, effectiveCast, effectiveContext, finalMessages);
+      persistMessages(finalMessages);
     } catch (e) {
       setError(e.message || "网络出了点问题，再试一次");
-      // 把刚发的用户消息保留，方便重发
     } finally {
       setLoading(false);
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 80);
     }
+  }
+
+  // 选择图片 → 压缩为base64
+  function handlePickImage(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { setError("请选择图片文件"); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const comma = String(dataUrl).indexOf(",");
+      const data = String(dataUrl).slice(comma + 1);
+      setPendingImage({ dataUrl, mediaType: file.type, data });
+    };
+    reader.onerror = () => setError("图片读取失败，换一张试试");
+    reader.readAsDataURL(file);
+  }
+
+  // 把最新的对话消息写回本地历史记录
+  function persistMessages(msgs) {
+    if (!currentHistoryRef.current) return;
+    currentHistoryRef.current = { ...currentHistoryRef.current, messages: msgs, updatedAt: Date.now() };
+    upsertHistory(currentHistoryRef.current);
   }
 
   const currentSystem = SYSTEMS.find((s) => s.id === selected);
@@ -1639,45 +1674,39 @@ function AppInner() {
       );
     }
     if (c.type === "bazi") {
-      const [y, m, d, h] = c.text.split(" ");
+      const r = c.baziResult;
+      const p = r.pillars;
+      const fmtDayun = (yun) => yun.list.slice(0, 6).map((d) =>
+        d.index === 0 ? `起运前` : `${d.ganzhi}(${d.startAge}-${d.endAge}岁)`
+      ).join(" · ");
       return (
         <>
-          {row("年柱", <span className="ser">{y}</span>, "b1")}
-          {row("月柱", <span className="ser">{m}</span>, "b2")}
-          {row("日柱", <span className="ser">{d}</span>, "b3")}
-          {row("时柱", <span className="ser">{h}</span>, "b4")}
-          {c.gender && row("性别", c.gender, "b5")}
-          {c.dayun && row("大运", `约 ${c.dayun.qiyunYears} 岁起运（${c.dayun.forward ? "顺排" : "逆排"}，近似）：${c.dayun.luck.slice(0, 4).map((l) => `${l.startAge}岁${l.gz}`).join(" · ")}…`, "b6")}
+          {row("年柱", <span className="ser">{p.year}</span>, "b1")}
+          {row("月柱", <span className="ser">{p.month}</span>, "b2")}
+          {row("日柱", <span className="ser">{p.day}</span>, "b3")}
+          {row("时柱", p.hour ? <span className="ser">{p.hour}</span> : "未知（时间不确定）", "b4")}
+          {row("农历", r.lunarText, "b5")}
+          {r.dayun.unknownGender ? (
+            <>
+              {row("大运（按男命）", fmtDayun(r.dayun.male), "b6m")}
+              {row("大运（按女命）", fmtDayun(r.dayun.female), "b6f")}
+            </>
+          ) : (
+            row(`大运（${r.dayun.forward ? "顺排" : "逆排"}）`, fmtDayun(r.dayun), "b6")
+          )}
         </>
       );
     }
     if (c.type === "liuren") {
-      // 展示顺序仿传统盘：上排 留连 速喜 赤口，下排 大安 空亡 小吉
-      const order = ["留连", "速喜", "赤口", "大安", "空亡", "小吉"];
-      const byName = {};
-      (c.pan || []).forEach((p) => { byName[p.name] = p; });
-      const wxColor = { 木: "#7BA05B", 火: "#C0504D", 土: "#8B6F47", 金: "#C9A227", 水: "#4A7BA6" };
+      const info = c.info || {};
       return (
         <>
-          {row("起课", c.mode, "l3")}
-          {row("自身落宫", <span className="ser">{c.palace}</span>, "l1")}
-          {c.pan && (
-            <div className="lr-grid">
-              {order.map((nm) => {
-                const p = byName[nm];
-                if (!p) return null;
-                return (
-                  <div className={"lr-cell" + (p.isSelf ? " self" : "")} key={nm}>
-                    <div className="lr-top"><span>{p.god}</span><span className="lr-mark">{p.isSelf ? "时·自身" : p.isDay ? "日" : ""}</span></div>
-                    <div className="lr-gz">{p.stem}<em>({p.stemWx})</em> {p.branch}<em>({p.branchWx})</em></div>
-                    <div className="lr-qin">{p.qin}</div>
-                    <div className="lr-name">{p.name}</div>
-                    <div className="lr-wx" style={{ background: wxColor[p.wuxing] || "#888" }}>{p.wuxing}</div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {row("落宫", <span className="ser">{c.palace}</span>, "l1")}
+          {row("时辰", `第 ${c.hourNum} 个时辰`, "l2")}
+          {c.mode && row("起课", c.mode, "l3")}
+          {c.lunarMonth && row(c.isReportedDay ? "月 / 报数" : "农历", `${c.lunarMonth} 月 ${c.lunarDay} ${c.isReportedDay ? "（报数）" : "日"}`, "l4")}
+          {info.liuqin && row("六亲 · 六神", `${info.liuqin} · ${info.liushen}`, "l5")}
+          {info.star && row("星曜 · 方位", `${info.star} · ${info.fangwei}`, "l6")}
         </>
       );
     }
@@ -1744,7 +1773,7 @@ function AppInner() {
           <div className="sec-head">
             <Kicker code="CHAPTER 01" label="择体 · 六大体系" />
             <h2>六体系索引 · 择一而问</h2>
-            <p className="lead">六套术数各有所长，起局方式、擅答之事皆异。下表为目录式索引，点选其一即可起局问卜。左上角 ☰ 可查看历史问卜记录。</p>
+            <p className="lead">六套术数各有所长，起局方式、擅答之事皆异。下表为目录式索引，点选其一即可起局问卜。</p>
           </div>
           <div className="sys-grid">
             {SYSTEMS.map((s, i) => {
@@ -1760,16 +1789,61 @@ function AppInner() {
             })}
           </div>
         </section>
+
+        {/* CHAPTER 02 · 历史记录（本地留存，仅当有记录时显示） */}
+        {historyList.length > 0 && (
+          <section className="section">
+            <div className="sec-head">
+              <Kicker code="ARCHIVE" label="历史记录 · 本地留存" />
+              <h2>历史记录</h2>
+              <p className="lead">仅保存在这台设备的浏览器里，不会上传到任何服务器；最多保留 {HISTORY_LIMIT} 条，点开可看完整问答。</p>
+            </div>
+            <div className="btn-row" style={{ marginBottom: 16, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => { if (window.confirm("确定要清空全部历史记录吗？此操作不可恢复。")) clearAllHistory(); }}
+              >
+                清空全部历史
+              </button>
+            </div>
+            <div className="history-list">
+              {historyList.map((h) => (
+                <details className="acc history-item" key={h.id}>
+                  <summary>
+                    <span>{h.systemName} · {h.castSummary}</span>
+                    <span className="hint">{fmtHistoryTime(h.updatedAt)}</span>
+                  </summary>
+                  <div className="acc-body">
+                    {h.messages.length === 0 ? (
+                      <p>（这一局还没有开始提问）</p>
+                    ) : (
+                      h.messages.map((m, i) => (
+                        <div className="hist-msg" key={i}>
+                          <div className={"hist-role" + (m.role === "assistant" ? " bot" : "")}>{m.role === "assistant" ? "AI 解读" : "你问"}</div>
+                          <div className="hist-content">{m.content}</div>
+                        </div>
+                      ))
+                    )}
+                    <div className="btn-row" style={{ marginTop: 14 }}>
+                      <button type="button" className="btn ghost" onClick={() => deleteHistoryEntry(h.id)}>删除这条记录</button>
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
         </>
         )}
 
         {/* 详情页：选中体系后显示返回按钮 */}
         {/* 详情页顶部返回栏 */}
         {selected && (
-          <div className="backbar" style={{ paddingLeft: 56 }}>
+          <div className="backbar">
             <button className="backbtn" onClick={() => resetForm(null)}>← 返回 · 重新择体</button>
             {phase === "chat" && NEEDS_SETUP[selected] && (
-              <button className="backbtn" style={{ marginLeft: 10 }} onClick={() => { setPhase("setup"); setMessages([]); setCastContext(""); setCastInfo(null); setCurrentRecordId(null); setError(""); setInput(""); }}>✎ 修改资料</button>
+              <button className="backbtn" style={{ marginLeft: 10 }} onClick={() => { setPhase("setup"); setMessages([]); setCastContext(""); setCastInfo(null); currentHistoryRef.current = null; setError(""); setInput(""); }}>✎ 修改资料</button>
             )}
             {phase === "chat" && (
               <button className="backbtn" style={{ marginLeft: 10 }} onClick={() => resetForm(selected)}>↻ 重新起局</button>
@@ -1787,65 +1861,82 @@ function AppInner() {
             <div className="form-card">
               <div className="fgrid">
                 <div>
-                  {selected === "bazi" && (
-                    <>
-                      <label className="flabel">历法</label>
-                      <div className="spread" style={{ marginBottom: 12 }}>
-                        <button type="button" className={calType === "solar" ? "on" : ""} onClick={() => setCalType("solar")}>新历（公历）</button>
-                        <button type="button" className={calType === "lunar" ? "on" : ""} onClick={() => setCalType("lunar")}>农历</button>
-                      </div>
-                      {calType === "solar" ? (
-                        <div className="frow" style={{ marginBottom: 12 }}>
-                          <div>
-                            <label className="flabel">出生日期</label>
-                            <input className="fin" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-                          </div>
-                          <div>
-                            <label className="flabel">出生时间</label>
-                            <input className="fin" type="time" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} disabled={hourUnknown} />
-                          </div>
+                  {selected === "bazi" && (() => {
+                    const leapMonthOfYear = baziCalendar === "lunar" && baziYear ? getLunarLeapMonth(baziYear) : 0;
+                    const showLeapCheck = leapMonthOfYear > 0 && Number(baziMonth) === leapMonthOfYear;
+                    return (
+                      <>
+                        <label className="flabel">历法</label>
+                        <div className="spread" style={{ marginBottom: 14 }}>
+                          <button type="button" className={baziCalendar === "solar" ? "on" : ""} onClick={() => setBaziCalendar("solar")}>新历（公历）</button>
+                          <button type="button" className={baziCalendar === "lunar" ? "on" : ""} onClick={() => setBaziCalendar("lunar")}>农历</button>
                         </div>
-                      ) : (
-                        <>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-                            <div>
-                              <label className="flabel">农历年</label>
-                              <input className="fin" type="number" value={lunarY} onChange={(e) => setLunarY(e.target.value)} placeholder="1998" />
-                            </div>
-                            <div>
-                              <label className="flabel">农历月</label>
-                              <input className="fin" type="number" min="1" max="12" value={lunarM} onChange={(e) => setLunarM(e.target.value)} placeholder="8" />
-                            </div>
-                            <div>
-                              <label className="flabel">农历日</label>
-                              <input className="fin" type="number" min="1" max="30" value={lunarD} onChange={(e) => setLunarD(e.target.value)} placeholder="15" />
-                            </div>
-                          </div>
-                          <label className="flabel">出生时间</label>
-                          <input className="fin" style={{ marginBottom: 12 }} type="time" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} disabled={hourUnknown} />
-                        </>
-                      )}
-                      <label className="flabel" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, cursor: "pointer" }}>
-                        <input type="checkbox" checked={hourUnknown} onChange={(e) => setHourUnknown(e.target.checked)} style={{ width: 16, height: 16 }} />
-                        不清楚出生时间（起运时间会不太准，可在对话里让解读师帮你倒推时辰）
-                      </label>
-                      <label className="flabel">性别（排大运需要）</label>
-                      <div className="spread" style={{ marginBottom: 12 }}>
-                        <button type="button" className={gender === "男" ? "on" : ""} onClick={() => setGender("男")}>男</button>
-                        <button type="button" className={gender === "女" ? "on" : ""} onClick={() => setGender("女")}>女</button>
-                      </div>
-                      <div className="frow" style={{ marginBottom: 4 }}>
-                        <div>
-                          <label className="flabel">出生地（可填"未知"或留空）</label>
-                          <input className="fin" type="text" value={birthPlace} onChange={(e) => setBirthPlace(e.target.value)} placeholder="例 浙江杭州 / 未知" />
+
+                        <label className="flabel">出生年 · 月 · 日</label>
+                        <div className="ymdrow" style={{ marginBottom: 8 }}>
+                          <input className="fin" type="number" placeholder="年 如 1990" value={baziYear} onChange={(e) => setBaziYear(e.target.value)} />
+                          <input className="fin" type="number" placeholder="月" min="1" max="12" value={baziMonth} onChange={(e) => setBaziMonth(e.target.value)} />
+                          <input className="fin" type="number" placeholder="日" min="1" max="31" value={baziDay} onChange={(e) => setBaziDay(e.target.value)} />
                         </div>
-                        <div>
-                          <label className="flabel">现居地（可填"未知"或留空）</label>
-                          <input className="fin" type="text" value={livePlace} onChange={(e) => setLivePlace(e.target.value)} placeholder="例 上海 / 未知" />
+                        {showLeapCheck && (
+                          <label className="checkline" style={{ marginBottom: 14 }}>
+                            <input type="checkbox" checked={baziLeapMonth} onChange={(e) => setBaziLeapMonth(e.target.checked)} />
+                            这是闰{leapMonthOfYear}月（{baziYear}年农历有闰{leapMonthOfYear}月）
+                          </label>
+                        )}
+
+                        <label className="flabel">出生时间</label>
+                        <div className="frow" style={{ marginBottom: 10 }}>
+                          <input className="fin" type="number" placeholder="时 0-23" min="0" max="23" disabled={baziHourUnknown} value={baziHour} onChange={(e) => setBaziHour(e.target.value)} />
+                          <input className="fin" type="number" placeholder="分（选填）" min="0" max="59" disabled={baziHourUnknown} value={baziMinute} onChange={(e) => setBaziMinute(e.target.value)} />
                         </div>
-                      </div>
-                    </>
-                  )}
+                        <label className="checkline" style={{ marginBottom: 10 }}>
+                          <input type="checkbox" checked={baziHourUnknown} onChange={(e) => { setBaziHourUnknown(e.target.checked); if (!e.target.checked) setShichenOpen(false); }} />
+                          不确定具体出生时间
+                        </label>
+                        {baziHourUnknown && (
+                          <>
+                            <Callout tone="verm" label="提醒">时辰不确定，时柱与起运的具体年龄都只能算个大概、有偏差；下面「时辰倒推」能帮你缩小范围，但结果也不一定准，仅供参考。</Callout>
+                            <div className="btn-row" style={{ marginTop: 10, marginBottom: 14 }}>
+                              <button type="button" className="btn ghost" onClick={() => setShichenOpen((v) => !v)}>
+                                {shichenOpen ? "收起时辰倒推" : "帮我推算大概时辰 →"}
+                              </button>
+                            </div>
+                            {shichenOpen && (!baziYear || !baziMonth || !baziDay ? (
+                              <Callout tone="gold" label="先填年月日">时辰倒推需要先填好出生年、月、日，才能推算候选时辰的四柱与大运。</Callout>
+                            ) : (
+                              <ShichenWizard
+                                calendar={baziCalendar} year={baziYear} month={baziMonth} day={baziDay} isLeapMonth={baziLeapMonth}
+                                gender={baziGender} groupKey={shichenGroupKey}
+                                onPickGroup={(key) => setShichenGroupKey(key)}
+                                onBackToGroup={() => setShichenGroupKey("")}
+                                onConfirmHour={(branch, hour) => {
+                                  setShichenFinalHour(branch);
+                                  setBaziHour(String(hour));
+                                  setBaziMinute("0");
+                                  setBaziHourUnknown(false);
+                                  setShichenOpen(false);
+                                }}
+                              />
+                            ))}
+                          </>
+                        )}
+
+                        <label className="flabel">性别</label>
+                        <div className="spread c3" style={{ marginBottom: 14 }}>
+                          <button type="button" className={baziGender === "male" ? "on" : ""} onClick={() => setBaziGender("male")}>男</button>
+                          <button type="button" className={baziGender === "female" ? "on" : ""} onClick={() => setBaziGender("female")}>女</button>
+                          <button type="button" className={baziGender === "" ? "on" : ""} onClick={() => setBaziGender("")}>未知</button>
+                        </div>
+                        {baziGender === "" && <Callout tone="jade" label="性别未填">大运顺排、逆排取决于性别，未填时会同时列出男命、女命两种排法供参考。</Callout>}
+
+                        <label className="flabel" style={{ marginTop: 14 }}>出生地（选填）</label>
+                        <input className="fin" style={{ marginBottom: 12 }} type="text" value={baziBirthPlace} onChange={(e) => setBaziBirthPlace(e.target.value)} placeholder="如：广东广州" />
+                        <label className="flabel">现居地（选填）</label>
+                        <input className="fin" type="text" value={baziCurrentPlace} onChange={(e) => setBaziCurrentPlace(e.target.value)} placeholder="如：上海" />
+                      </>
+                    );
+                  })()}
                   {selected === "liuren" && (
                     <>
                       <label className="flabel">起课方式</label>
@@ -1857,9 +1948,9 @@ function AppInner() {
                         <Callout tone="jade" label="时间起课">按中国时间自动换算成农历月、日，配合当前时辰掐指定局，你什么都不用填，直接开始问即可。</Callout>
                       ) : (
                         <>
-                          <label className="flabel">心中默想所问之事，随口报一个数字</label>
-                          <input className="fin" type="text" value={liurenNumbers} onChange={(e) => setLiurenNumbers(e.target.value)} placeholder="例 7" />
-                          <Callout tone="jade" label="报数起课">所报之数从「大安」起顺数落宫，以落宫结合六神五行断事。</Callout>
+                          <label className="flabel">随口报一个数字</label>
+                          <input className="fin" type="text" value={liurenNumbers} onChange={(e) => setLiurenNumbers(e.target.value)} placeholder="例 18" />
+                          <Callout tone="jade" label="报数起课">心中默想所问之事，随口报一个数即可——月、时辰仍按当下农历真实换算，只有这个数会代入起课，不必再费心算农历。</Callout>
                         </>
                       )}
                     </>
@@ -1874,10 +1965,20 @@ function AppInner() {
                   {selected === "tarot" && (
                     <>
                       <label className="flabel">选个牌阵</label>
-                      <div className="spread" style={{ marginBottom: 14, flexWrap: "wrap" }}>
-                        {Object.entries(TAROT_SPREADS).map(([key, s]) => (
-                          <button key={key} type="button" className={tarotSpread === key ? "on" : ""} onClick={() => setTarotSpread(key)}>{s.label}</button>
+                      <select className="selbox" style={{ marginBottom: 8 }} value={tarotSpread} onChange={(e) => setTarotSpread(e.target.value)}>
+                        {Object.entries(
+                          Object.entries(TAROT_SPREADS).reduce((acc, [key, s]) => {
+                            (acc[s.group] = acc[s.group] || []).push([key, s]);
+                            return acc;
+                          }, {})
+                        ).map(([group, items]) => (
+                          <optgroup key={group} label={group}>
+                            {items.map(([key, s]) => <option key={key} value={key}>{s.label}</option>)}
+                          </optgroup>
                         ))}
+                      </select>
+                      <div className="spread-positions">
+                        {TAROT_SPREADS[tarotSpread].positions.map((p, i) => <span className="pos-chip" key={i}>{i + 1}. {p}</span>)}
                       </div>
                       <label className="flabel">抽牌方式</label>
                       <div className="spread" style={{ marginBottom: 12 }}>
@@ -1886,11 +1987,11 @@ function AppInner() {
                       </div>
                       {tarotDrawMode === "numbers" && (
                         <>
-                          <label className="flabel">报几个数字（空格隔开，几张牌报几个数）</label>
+                          <label className="flabel">报几个数字（1-78，空格隔开，几张牌报几个数）</label>
                           <input className="fin" type="text" value={tarotNumbers} onChange={(e) => setTarotNumbers(e.target.value)} placeholder="例 7 21 40" />
                         </>
                       )}
-                      <Callout tone="jade" label="抽牌">随机抽牌由程序随机；报数字起牌则由你报的数字决定抽到哪几张、正逆位。</Callout>
+                      <Callout tone="jade" label="抽牌">随机抽牌由程序随机；报数字起牌请在 1-78 之间各报一个数（对应78张牌），由数字决定抽到哪几张、正逆位。</Callout>
                     </>
                   )}
                 </div>
@@ -1925,11 +2026,16 @@ function AppInner() {
             {/* 对话气泡区 */}
             <div className="chat">
               {messages.length === 0 && !loading && (
-                <div className="chat-hint">{selected === "qimen" ? "直接把想问的事说出来——你问的这一刻，会按当下的时间起盘，然后据此为你解读。" : selected === "liuyao" ? "心里想着要问的事，把问题发出来——发出的那一刻会为你摇卦成卦，然后据此解读。" : "局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。"}</div>
+                <div className="chat-hint">
+                  {selected === "qimen" && "直接把想问的事说出来——你问的这一刻，会按当下的时间起盘，然后据此为你解读。"}
+                  {selected === "liuyao" && "六爻讲究「不问不卜」，先把想问的具体事情说出来——一提交就会摇钱起卦，据卦而断。"}
+                  {selected !== "qimen" && selected !== "liuyao" && "局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。"}
+                </div>
               )}
               {messages.map((m, i) => (
                 <div key={i} className={"bubble " + (m.role === "user" ? "me" : "bot")}>
-                  <div className="bubble-body">{m.content}</div>
+                  {m.img && <img className="bubble-img" src={m.img} alt="用户图片" />}
+                  {m.content && <div className="bubble-body">{m.content}</div>}
                 </div>
               ))}
               {loading && (
@@ -1943,7 +2049,15 @@ function AppInner() {
             {error && <p className="errline">✕ {error}</p>}
 
             {/* 输入框 */}
+            {pendingImage && (
+              <div className="img-preview">
+                <img src={pendingImage.dataUrl} alt="待发送" />
+                <button onClick={() => setPendingImage(null)}>✕ 移除</button>
+              </div>
+            )}
             <div className="chat-input">
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePickImage} />
+              <button className="img-btn" onClick={() => fileInputRef.current && fileInputRef.current.click()} title="发图片">📷</button>
               <textarea
                 className="chat-box"
                 value={input}
@@ -1954,10 +2068,10 @@ function AppInner() {
                     sendMessage();
                   }
                 }}
-                placeholder="描述你的问题…（回车发送，Shift+回车换行）"
+                placeholder="描述你的问题…（可发图片让我帮看，回车发送）"
                 rows={2}
               />
-              <button className="send-btn" onClick={sendMessage} disabled={loading || !input.trim()}>发送</button>
+              <button className="send-btn" onClick={sendMessage} disabled={loading || (!input.trim() && !pendingImage)}>发送</button>
             </div>
           </section>
         )}
@@ -1978,10 +2092,13 @@ function AppInner() {
               </ul>
               <h4>准确性说明 · Accuracy</h4>
               <ul>
-                <li>八字年柱、月柱按节气近似日期表判断，节气交接前后 1 天内出生者建议以万年历核对。</li>
-                <li>小六壬需自行填入准确的农历月、日；闰月按当月实际农历数填写。</li>
-                <li>梅花易数「时间起卦」因未接入农历库，采阳历干支变体；如需严格古法，请改用数字起卦。</li>
-                <li>奇门遁甲的局数、地盘、值符值使已精确计算，其余七星七门按固定序由 AI 补齐。</li>
+                <li>八字四柱、大运均由农历库按精确节气时刻推算，支持农历/新历输入与闰月；出生时间不确定时，时柱与起运时间只能算个大概，可用「时辰倒推」向导辅助缩小范围，最终仍需自行核实，结果仅供参考。性别未填时会同时列出男命、女命两种大运排法。</li>
+                <li>小六壬的农历月、日、时辰均按当下中国时间自动换算，报数起课时只有「日」由你随口报的数代入，月与时辰仍是真实农历，不会再对不上。六亲、六神、星曜对应为民间通行版本，不同流派/典籍分配略有出入。</li>
+                <li>梅花易数「时间起卦」因未接入精确干支排盘，采阳历干支变体；如需严格古法，请改用数字起卦。</li>
+                <li>六爻讲究「不问不卜」，选定体系后需先说出想问的具体事情，才会摇钱起卦。</li>
+                <li>奇门遁甲的局数、地盘、值符值使已精确计算，其余七星七门按固定序由 AI 补齐；解读会紧扣值符值使、九星八门等盘面元素，而非泛泛而谈。</li>
+                <li>塔罗提供整体运势、感情、事业财运、决策辅助等十余种牌阵，可在下拉框中按需选择。</li>
+                <li>「历史记录」只保存在你这台设备的浏览器本地存储里，不会上传到任何服务器，换设备或清除浏览器数据后不可找回。</li>
               </ul>
               <div style={{ marginTop: 16 }}>
                 <Callout tone="verm" label="免责 · Disclaimer">术数推演仅供参考与自省，不构成对具体决策（含投资、医疗、法律、婚姻等）的建议；请勿以此替代专业意见或用于赌博投机。</Callout>
@@ -1989,41 +2106,6 @@ function AppInner() {
             </div>
           </details>
         </section>
-        )}
-
-        {/* 左上角菜单按钮（打开问卜记录侧边栏） */}
-        <button className="menu-btn" onClick={() => setShowHistory(true)} aria-label="问卜记录">☰</button>
-
-        {/* 左侧历史侧边栏 */}
-        {showHistory && (
-          <div className="hist-overlay" onClick={() => setShowHistory(false)}>
-            <div className="hist-panel" onClick={(e) => e.stopPropagation()}>
-              <div className="hist-head">
-                <span>问卜记录</span>
-                <button className="hist-close" onClick={() => setShowHistory(false)}>✕</button>
-              </div>
-              <button className="hist-new" onClick={() => { setShowHistory(false); resetForm(null); }}>＋ 新的问卜</button>
-              {history.length === 0 ? (
-                <div className="hist-empty">还没有问卜记录。问过之后会自动存在这台设备上。</div>
-              ) : (
-                <>
-                  <div className="hist-count">共 {history.length} 条 · 仅存本机</div>
-                  <div className="hist-list">
-                    {history.map((rec) => (
-                      <div className={"hist-item" + (rec.id === currentRecordId ? " cur" : "")} key={rec.id}>
-                        <button className="hist-main" onClick={() => openRecord(rec)}>
-                          <div className="hist-sys">{rec.systemName}</div>
-                          <div className="hist-title">{rec.title}</div>
-                          <div className="hist-time">{new Date(rec.updatedAt).toLocaleString("zh-CN", { hour12: false })} · {(rec.messages || []).length} 条消息</div>
-                        </button>
-                        <button className="hist-del" onClick={() => deleteRecord(rec.id)}>删</button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
         )}
 
         <RunBar pos="bot" />
@@ -2066,4 +2148,5 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
 
