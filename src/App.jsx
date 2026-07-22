@@ -213,6 +213,18 @@ function mod(n, m) {
   return ((n % m) + m) % m;
 }
 
+// 解析用户输入的一串"报数"文本，只保留有限、合理范围内的正整数。
+// 过滤：非数字、超长数字段（会溢出成 Infinity，或虽未溢出但超出双精度安全整数范围导致精度丢失）、0。
+// 带负号的数字段直接丢弃（而不是悄悄去掉负号当正数用）——报数起卦本就该报正数，
+// 保留负号会篡改用户真实输入却毫无提示，丢弃后交由调用方现有的"数量不足"校验去提示用户重报。
+// 输入为空/不含任何合法数字时返回空数组——调用方应据此判断是否要报错提示用户，而不是静默套默认值。
+function parsePositiveInts(str) {
+  return ((str || "").match(/-?[0-9]+/g) || [])
+    .filter((s) => !s.startsWith("-") && s.length <= 15) // 15位以内，远小于 Number.MAX_SAFE_INTEGER 的16位，避免精度丢失
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n >= 1 && n <= Number.MAX_SAFE_INTEGER);
+}
+
 function getDayGanZhi(date) {
   const ref = Date.UTC(1900, 0, 31, 12);
   const cur = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12);
@@ -285,9 +297,9 @@ function computeBazi(date) {
 }
 
 // ---------------- 八字精确排盘 + 大运（基于 lunar-javascript，节气精确到分钟，供「八字」体系专用） ----------------
-const { Solar: LSolar, Lunar: LLunar, LunarYear: LLunarYearClass } = (function () {
+const { Solar: LSolar, Lunar: LLunar, LunarYear: LLunarYearClass, LunarMonth: LLunarMonthClass } = (function () {
   const base = LunarLib.default || LunarLib;
-  return { Solar: base.Solar, Lunar: base.Lunar, LunarYear: base.LunarYear };
+  return { Solar: base.Solar, Lunar: base.Lunar, LunarYear: base.LunarYear, LunarMonth: base.LunarMonth };
 })();
 
 // 查询某农历年是否有闰月，返回闰月月份数字（0 表示当年无闰月）
@@ -299,18 +311,73 @@ function getLunarLeapMonth(lunarYear) {
   }
 }
 
+// 某公历年月的实际天数（自动处理大小月与闰年）
+function daysInSolarMonth(year, month) {
+  const y = Number(year), m = Number(month);
+  if (!y || !m || m < 1 || m > 12) return 31;
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+// 某农历年月（含是否闰月）的实际天数；查不到（比如该年根本没有这个闰月）时返回 0
+function daysInLunarMonth(year, month, isLeap) {
+  const y = Number(year), m = Number(month);
+  if (!y || !m || m < 1 || m > 12) return 30;
+  try {
+    const lm = LLunarMonthClass.fromYm(y, isLeap ? -m : m);
+    return lm ? lm.getDayCount() : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+// 出生日期/时间的范围校验：在交给 lunar-javascript 之前先自己把关，
+// 因为该库对"日"只校验绝对范围(1-31)，像 2月31日、4月31日这种"当月不存在"的日期会被静默 normalize
+// 成完全不同的日子而不报错（比如 1990-2-31 会被当成 1990-3-3 处理），比直接崩溃更危险。
+function validateBaziInputs(inputs) {
+  const year = Number(inputs.year);
+  const month = Number(inputs.month);
+  const day = Number(inputs.day);
+
+  // 年份上限校验：不加的话超大年份（如 1e20）会让 Date.UTC 溢出成 NaN，
+  // 而 NaN 参与比较恒为 false，会绕过下面的 maxDay 校验一路捅到 lunar-javascript 库里，
+  // 导致 getLunar() 同步死循环卡死整个标签页（try/catch 完全防不住这种挂起，只能提前堵在这里）
+  if (!Number.isInteger(year) || year < 1 || year > 9999) throw new Error("出生年份不对，请重新选择");
+  if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error("出生月份不对，请重新选择");
+  if (!Number.isInteger(day) || day < 1) throw new Error("出生日期不对，请重新选择");
+
+  const maxDay = inputs.calendar === "lunar"
+    ? daysInLunarMonth(year, month, !!inputs.isLeapMonth)
+    : daysInSolarMonth(year, month);
+  if (!Number.isFinite(maxDay) || maxDay <= 0) throw new Error(`${year}年${inputs.isLeapMonth ? "闰" : ""}${month}月不存在，请重新选择`);
+  if (day > maxDay) throw new Error(`${inputs.calendar === "lunar" ? "农历" : ""}${month}月只有${maxDay}天，请重新选择日期`);
+
+  if (!inputs.hourUnknown) {
+    const hour = inputs.hour === "" || inputs.hour == null ? 12 : Number(inputs.hour);
+    const minute = inputs.minute === "" || inputs.minute == null ? 0 : Number(inputs.minute);
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) throw new Error("出生时辰不对，请重新选择");
+    if (!Number.isInteger(minute) || minute < 0 || minute > 59) throw new Error("出生分钟不对，请重新选择");
+  }
+}
+
 // inputs: { calendar:'solar'|'lunar', year, month, day, isLeapMonth, hour, minute, hourUnknown, gender:'male'|'female'|'unknown' }
 function computeBaziPrecise(inputs) {
+  validateBaziInputs(inputs);
+
   const hour = inputs.hourUnknown ? 12 : (inputs.hour != null && inputs.hour !== "" ? Number(inputs.hour) : 12);
   const minute = inputs.hourUnknown ? 0 : (inputs.minute != null && inputs.minute !== "" ? Number(inputs.minute) : 0);
 
   let lunar;
-  if (inputs.calendar === "lunar") {
-    const m = inputs.isLeapMonth ? -Math.abs(Number(inputs.month)) : Math.abs(Number(inputs.month));
-    lunar = LLunar.fromYmdHms(Number(inputs.year), m, Number(inputs.day), hour, minute, 0);
-  } else {
-    const solar = LSolar.fromYmdHms(Number(inputs.year), Number(inputs.month), Number(inputs.day), hour, minute, 0);
-    lunar = solar.getLunar();
+  try {
+    if (inputs.calendar === "lunar") {
+      const m = inputs.isLeapMonth ? -Math.abs(Number(inputs.month)) : Math.abs(Number(inputs.month));
+      lunar = LLunar.fromYmdHms(Number(inputs.year), m, Number(inputs.day), hour, minute, 0);
+    } else {
+      const solar = LSolar.fromYmdHms(Number(inputs.year), Number(inputs.month), Number(inputs.day), hour, minute, 0);
+      lunar = solar.getLunar();
+    }
+  } catch (e) {
+    // 兜底：即便上面的校验有漏网之鱼，也不让底层库的异常直接穿透到事件处理函数外层
+    throw new Error("出生日期/时间不合法，请检查后重新填写");
   }
 
   const eightChar = lunar.getEightChar();
@@ -615,6 +682,9 @@ const SIX_PALACE_INFO = {
 };
 
 function computeXiaoLiuRen(lunarMonth, lunarDay, hour) {
+  if (!Number.isFinite(lunarMonth) || !Number.isFinite(lunarDay) || !Number.isFinite(hour)) {
+    throw new Error("起课数据不对，请重新填写");
+  }
   const hourNum = mod(Math.floor((hour + 1) / 2), 12) + 1;
   let idx = mod(lunarMonth - 1, 6);
   idx = mod(idx + (lunarDay - 1), 6);
@@ -729,7 +799,7 @@ function movingLineFromNumber(n) {
 
 // numbersStr 有两个及以上数字→数字起卦；否则以当前时间（阳历干支变体）起卦
 function computeMeihua(numbersStr, now) {
-  const nums = (numbersStr || "").split(/[^0-9]+/).filter(Boolean).map(Number);
+  const nums = parsePositiveInts(numbersStr);
   let upperName, lowerName, movePos, method;
 
   if (nums.length >= 2) {
@@ -804,12 +874,14 @@ function drawTarotByNumbers(nums, count) {
   const used = new Set();
   for (let i = 0; i < count; i++) {
     let n = nums[i] != null ? nums[i] : nums.reduce((a, b) => a + b, i + 1);
+    if (!Number.isFinite(n)) n = i + 1; // 防御性兜底，理论上不会触发（上游已校验）
     let idx = mod(n - 1, TAROT_DECK.length);
     // 避免重复
     let guard = 0;
     while (used.has(idx) && guard < TAROT_DECK.length) { idx = mod(idx + 1, TAROT_DECK.length); guard++; }
     used.add(idx);
     const card = TAROT_DECK[idx];
+    if (!card) continue; // 防御性兜底：理论上 idx 已被 mod 限制在合法范围内
     const reversed = n % 2 === 0; // 偶数逆位
     drawn.push({ card: card.name, code: card.code, reversed });
   }
@@ -987,6 +1059,8 @@ const DESIGN_CSS = `
 .backbar{padding:24px 0 0}
 .backbtn{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-sub);cursor:pointer;transition:background .18s}
 .backbtn:hover{background:var(--card3);color:var(--ink)}
+.backbtn:disabled{opacity:.45;cursor:not-allowed}
+.backbtn:disabled:hover{background:var(--card)}
 .chat{display:flex;flex-direction:column;gap:14px;margin:6px 0 16px;min-height:120px}
 .chat-hint{background:var(--card);border:1px dashed var(--line2);border-radius:10px;padding:16px 18px;color:var(--ink-sub);font-size:14px;line-height:1.7}
 .bubble{max-width:86%;display:flex;flex-direction:column}
@@ -1258,6 +1332,11 @@ function ShichenWizard({ calendar, year, month, day, isLeapMonth, gender, groupK
   );
 }
 
+/* ---------------- 聊天图片上传：大小限制 + 压缩重编码参数 ---------------- */
+const IMAGE_MAX_RAW_MB = 20; // 原始文件大小上限，超过直接拒绝（避免卡死浏览器）
+const IMAGE_MAX_DIMENSION = 1280; // 重编码后最长边像素上限
+const IMAGE_JPEG_QUALITY = 0.82; // 重编码 JPEG 质量
+
 /* ---------------- 历史记录（本地存储，不经过任何服务器） ---------------- */
 
 const HISTORY_KEY = "fzt_history_v1";
@@ -1267,22 +1346,29 @@ function loadHistory() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
     const list = raw ? JSON.parse(raw) : [];
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    // 清理历史遗留的空壳记录（起局但从没发过消息就关闭/刷新页面留下的僵尸）
+    const cleaned = list.filter((e) => e && Array.isArray(e.messages) && e.messages.length > 0);
+    if (cleaned.length !== list.length) saveHistory(cleaned);
+    return cleaned;
   } catch (e) {
     return [];
   }
 }
+// 返回 {ok, shrunk}：ok=是否成功写入（哪怕是缩减后的版本）；shrunk=是否因为空间不足丢弃了部分旧记录
 function saveHistory(list) {
+  const originalLength = list.length;
   let arr = list.slice(0, HISTORY_LIMIT);
   for (let attempt = 0; attempt < 6; attempt++) {
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
-      return;
+      return { ok: true, shrunk: arr.length < originalLength };
     } catch (e) {
-      if (arr.length <= 1) return;
+      if (arr.length <= 1) return { ok: false, shrunk: true };
       arr = arr.slice(0, Math.max(1, Math.floor(arr.length * 0.8)));
     }
   }
+  return { ok: false, shrunk: true };
 }
 function fmtHistoryTime(ts) {
   const d = new Date(ts);
@@ -1330,7 +1416,7 @@ function AppInner() {
   const [baziDay, setBaziDay] = useState("");
   const [baziLeapMonth, setBaziLeapMonth] = useState(false);
   const [baziHour, setBaziHour] = useState("");
-  const [baziMinute, setBaziMinute] = useState("");
+  const [baziMinute, setBaziMinute] = useState("0"); // 默认0分，和下拉框首个选项对齐
   const [baziHourUnknown, setBaziHourUnknown] = useState(false);
   const [baziGender, setBaziGender] = useState(""); // male | female | ""(未知)
   const [baziBirthPlace, setBaziBirthPlace] = useState("");
@@ -1357,12 +1443,18 @@ function AppInner() {
   const currentHistoryRef = useRef(null); // 当前这一局对应的历史记录条目（不含最新messages，发消息时再补上）
 
   function upsertHistory(entry) {
+    let saveResult = null;
     setHistoryList((prev) => {
       const idx = prev.findIndex((e) => e.id === entry.id);
       const next = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [entry, ...prev];
-      saveHistory(next);
+      // 一条消息都还没发的空壳不落盘：这样用户中途关标签页/刷新也不会在本地留下僵尸记录
+      // （仍然更新内存里的 historyList，本次会话内「历史记录」列表照常能看到这一局）
+      if (entry.messages.length > 0) saveResult = saveHistory(next);
       return next;
     });
+    if (saveResult && saveResult.shrunk) {
+      setError(saveResult.ok ? "提示：本机存储空间不够，已自动清理了一些旧的历史记录" : "历史记录存储已满，这一条没能保存下来");
+    }
   }
   function deleteHistoryEntry(id) {
     setHistoryList((prev) => {
@@ -1370,6 +1462,31 @@ function AppInner() {
       saveHistory(next);
       return next;
     });
+  }
+  // 从历史记录点进去继续对话：恢复该局的盘面、上下文、消息，切到对话页
+  function resumeHistory(h) {
+    if (loading) return;
+    // 若当前局是空壳，先清掉不留僵尸
+    abandonEmptyHistoryEntry();
+    setSelected(h.systemId);
+    setCastInfo(h.castInfo || null);
+    setCastContext(h.castContext || "");
+    setMessages(Array.isArray(h.messages) ? h.messages : []);
+    setError("");
+    setInput("");
+    setPendingImage && setPendingImage(null);
+    // 让后续发消息更新到这条记录上（沿用同一 id）
+    currentHistoryRef.current = { ...h };
+    setPhase("chat");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  // 离开/重置当前这一局时，如果它还是个从没发过消息的空壳（messages为空），顺手删掉，不留僵尸记录
+  function abandonEmptyHistoryEntry() {
+    const cur = currentHistoryRef.current;
+    if (cur && cur.messages.length === 0) {
+      deleteHistoryEntry(cur.id);
+    }
+    currentHistoryRef.current = null;
   }
   function clearAllHistory() {
     setHistoryList([]);
@@ -1380,6 +1497,8 @@ function AppInner() {
   const NEEDS_SETUP = { bazi: true, liuren: true, tarot: true, meihua: true };
 
   function resetForm(id) {
+    if (loading) return; // AI 正在回复时不允许切走，避免旧请求返回后把回复错接到新的一局上
+    abandonEmptyHistoryEntry();
     setSelected(id);
     setNumbers("");
     setTarotSpread("overall");
@@ -1393,7 +1512,7 @@ function AppInner() {
     setBaziDay("");
     setBaziLeapMonth(false);
     setBaziHour("");
-    setBaziMinute("");
+    setBaziMinute("0");
     setBaziHourUnknown(false);
     setBaziGender("");
     setBaziBirthPlace("");
@@ -1420,7 +1539,17 @@ function AppInner() {
   }
 
   // 起局：算出盘面，生成背景，进入对话阶段
+  // 起局失败时（比如出生日期不合法）统一在这里兜底，不让异常穿透到事件处理函数外层
   function startCast(id, opts) {
+    try {
+      return doStartCast(id, opts);
+    } catch (e) {
+      setError(e.message || "起局失败，请检查填写的信息");
+      return null;
+    }
+  }
+
+  function doStartCast(id, opts) {
     setError("");
     const now = new Date();
     let extra = {};
@@ -1450,8 +1579,9 @@ function AppInner() {
       const lm = lu.lunarMonth;
       let ld, isReportedDay;
       if (opts.liurenMode === "numbers") {
-        const ns = (opts.liurenNumbers || "").split(/[^0-9]+/).filter(Boolean).map(Number);
-        ld = ns[0] || 1;
+        const ns = parsePositiveInts(opts.liurenNumbers);
+        if (!ns.length) throw new Error("报数起课要报一个数字，不是文字哈，请重新输入");
+        ld = ns[0];
         isReportedDay = true;
       } else {
         ld = lu.lunarDay;
@@ -1483,8 +1613,9 @@ function AppInner() {
       const count = spread.positions.length;
       let cards;
       if (opts.tarotDrawMode === "numbers") {
-        const ns = (opts.tarotNumbers || "").split(/[^0-9]+/).filter(Boolean).map(Number);
-        cards = drawTarotByNumbers(ns.length ? ns : [7, 21, 40, 3], count);
+        const ns = parsePositiveInts(opts.tarotNumbers);
+        if (ns.length < count) throw new Error(`这个牌阵要${count}张牌，还需再报${count - ns.length}个数字哈`);
+        cards = drawTarotByNumbers(ns, count);
       } else {
         cards = drawTarot(count);
       }
@@ -1516,6 +1647,7 @@ function AppInner() {
       updatedAt: Date.now(),
       castSummary: castSummaryFor(id, cast),
       castInfo: cast,
+      castContext: ctx,
       messages: [],
     };
     currentHistoryRef.current = historyEntry;
@@ -1534,13 +1666,21 @@ function AppInner() {
       setError("填一下出生时间，不清楚的话勾选「不确定具体时间」即可");
       return;
     }
-    if (selected === "liuren" && liurenMode === "numbers" && !liurenNumbers.trim()) {
-      setError("报数起课先随口报一个数字哈");
+    if (selected === "liuren" && liurenMode === "numbers" && !parsePositiveInts(liurenNumbers).length) {
+      setError("报数起课要报一个数字，不是文字哈");
       return;
     }
-    if (selected === "tarot" && tarotDrawMode === "numbers" && !tarotNumbers.trim()) {
-      setError("报数起牌要先填数字哈");
+    if (selected === "meihua" && numbers.trim() && parsePositiveInts(numbers).length < 2) {
+      setError("起卦数字要填两个以上有效数字，比如「7 12」；不确定就留空按时间起卦");
       return;
+    }
+    if (selected === "tarot" && tarotDrawMode === "numbers") {
+      const need = TAROT_SPREADS[tarotSpread].positions.length;
+      const got = parsePositiveInts(tarotNumbers).length;
+      if (got < need) {
+        setError(`这个牌阵要${need}张牌，请报满${need}个数字（现在${got}个）`);
+        return;
+      }
     }
     startCast(selected, {
       baziCalendar, baziYear, baziMonth, baziDay, baziLeapMonth,
@@ -1549,6 +1689,16 @@ function AppInner() {
       numbers,
       tarotSpread, tarotDrawMode, tarotNumbers,
     });
+  }
+
+  // 历史轮次里如果带过图片，发给API时用文字占位替换，只在"这一轮"真正带上完整图片数据——
+  // 否则每发一句话都要把之前所有轮次的原图 base64 重新整包发一遍，流量和token随对话轮数线性放大
+  function stripOldImages(content) {
+    if (!Array.isArray(content)) return content;
+    const hadImage = content.some((b) => b.type === "image");
+    const text = content.filter((b) => b.type === "text").map((b) => b.text).join(" ");
+    if (!hadImage) return text;
+    return text ? `${text}　[之前发过一张图片]` : "[之前发过一张图片]";
   }
 
   // 发送一条对话消息
@@ -1564,6 +1714,12 @@ function AppInner() {
     let effectiveContext = castContext;
     if ((selected === "qimen" || selected === "liuyao") && !castContext) {
       effectiveContext = startCast(selected, { keepMessages: true });
+      if (!effectiveContext) {
+        // startCast 内部已经 setError 了；把用户输入的内容还回去，不要吞掉
+        setInput(text);
+        setPendingImage(img);
+        return;
+      }
     }
 
     // 发给API的消息：带图则用数组格式（Anthropic图片格式）
@@ -1576,7 +1732,10 @@ function AppInner() {
     // 存历史/显示用：图片存为可展示的标记
     const displayContent = img ? (text ? text + "　[图片]" : "[图片]") : text;
 
-    const apiMessages = [...messages.map((m) => ({ role: m.role, content: m.contentApi || m.content })), { role: "user", content: apiUserContent }];
+    const apiMessages = [
+      ...messages.map((m) => ({ role: m.role, content: stripOldImages(m.contentApi || m.content) })),
+      { role: "user", content: apiUserContent },
+    ];
     const nextMessages = [...messages, { role: "user", content: displayContent, contentApi: apiUserContent, img: img ? img.dataUrl : null }];
     setMessages(nextMessages);
     setLoading(true);
@@ -1612,27 +1771,59 @@ function AppInner() {
     }
   }
 
-  // 选择图片 → 压缩为base64
+  // 选择图片 → 按最长边等比缩放 + 统一重编码为 JPEG（顺带解决 HEIC/AVIF 等格式不兼容问题，
+  // 也把体积压下来，避免占爆 localStorage、拖慢每轮对话请求）
   function handlePickImage(e) {
     const file = e.target.files && e.target.files[0];
     e.target.value = "";
     if (!file) return;
     if (!/^image\//.test(file.type)) { setError("请选择图片文件"); return; }
+    if (file.size > IMAGE_MAX_RAW_MB * 1024 * 1024) {
+      setError(`图片太大了（超过 ${IMAGE_MAX_RAW_MB}MB），换一张小一点的试试`);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
-      const dataUrl = reader.result;
-      const comma = String(dataUrl).indexOf(",");
-      const data = String(dataUrl).slice(comma + 1);
-      setPendingImage({ dataUrl, mediaType: file.type, data });
+      const imgEl = new Image();
+      imgEl.onload = () => {
+        let { width, height } = imgEl;
+        if (width > IMAGE_MAX_DIMENSION || height > IMAGE_MAX_DIMENSION) {
+          const scale = IMAGE_MAX_DIMENSION / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(imgEl, 0, 0, width, height);
+        let dataUrl;
+        try {
+          dataUrl = canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY);
+        } catch (err) {
+          setError("这张图片处理失败，换一张试试");
+          return;
+        }
+        const comma = dataUrl.indexOf(",");
+        const data = dataUrl.slice(comma + 1);
+        setPendingImage({ dataUrl, mediaType: "image/jpeg", data });
+      };
+      imgEl.onerror = () => setError("这张图片打不开，可能是苹果HEIC等特殊格式，换成JPG/PNG格式试试");
+      imgEl.src = reader.result;
     };
     reader.onerror = () => setError("图片读取失败，换一张试试");
     reader.readAsDataURL(file);
   }
 
   // 把最新的对话消息写回本地历史记录
+  // 写盘前只保留"最新一张"图片的原图数据，更早轮次的图片去掉 img 字段——
+  // 历史记录查看面板本来就只展示文字（不渲染缩略图，见下方 h.messages.map），
+  // 多轮贴图会让单条记录体积线性增长、拖垮 localStorage 配额，而这些旧图数据其实从没被用到过
   function persistMessages(msgs) {
     if (!currentHistoryRef.current) return;
-    currentHistoryRef.current = { ...currentHistoryRef.current, messages: msgs, updatedAt: Date.now() };
+    const lastImgIdx = msgs.reduce((acc, m, i) => (m.img ? i : acc), -1);
+    const forStorage = msgs.map((m, i) => (m.img && i !== lastImgIdx ? { ...m, img: null } : m));
+    currentHistoryRef.current = { ...currentHistoryRef.current, messages: forStorage, updatedAt: Date.now() };
     upsertHistory(currentHistoryRef.current);
   }
 
@@ -1665,6 +1856,7 @@ function AppInner() {
     if (c.type === "meihua") {
       return (
         <>
+          {row("起卦方式", c.method, "m0")}
           {row("本卦", <><span className="ser">{c.ben.name}</span>（上{c.upperName} 下{c.lowerName}）</>, "m1")}
           {row("动爻", `第 ${c.movePos} 爻`, "m2")}
           {row("互卦", c.hu.name, "m3")}
@@ -1826,6 +2018,9 @@ function AppInner() {
                       ))
                     )}
                     <div className="btn-row" style={{ marginTop: 14 }}>
+                      {h.messages.length > 0 && (
+                        <button type="button" className="btn" onClick={() => resumeHistory(h)}>继续这局对话 →</button>
+                      )}
                       <button type="button" className="btn ghost" onClick={() => deleteHistoryEntry(h.id)}>删除这条记录</button>
                     </div>
                   </div>
@@ -1841,12 +2036,27 @@ function AppInner() {
         {/* 详情页顶部返回栏 */}
         {selected && (
           <div className="backbar">
-            <button className="backbtn" onClick={() => resetForm(null)}>← 返回 · 重新择体</button>
+            <button className="backbtn" disabled={loading} title={loading ? "AI 正在回复，请等它说完再离开" : undefined} onClick={() => resetForm(null)}>← 返回 · 重新择体</button>
             {phase === "chat" && NEEDS_SETUP[selected] && (
-              <button className="backbtn" style={{ marginLeft: 10 }} onClick={() => { setPhase("setup"); setMessages([]); setCastContext(""); setCastInfo(null); currentHistoryRef.current = null; setError(""); setInput(""); }}>✎ 修改资料</button>
+              <button
+                className="backbtn"
+                style={{ marginLeft: 10 }}
+                disabled={loading}
+                title={loading ? "AI 正在回复，请等它说完再修改资料" : undefined}
+                onClick={() => {
+                  if (loading) return; // 请求还没回来就不让改，避免旧回复串到新的一局里
+                  abandonEmptyHistoryEntry();
+                  setPhase("setup");
+                  setMessages([]);
+                  setCastContext("");
+                  setCastInfo(null);
+                  setError("");
+                  setInput("");
+                }}
+              >✎ 修改资料</button>
             )}
             {phase === "chat" && (
-              <button className="backbtn" style={{ marginLeft: 10 }} onClick={() => resetForm(selected)}>↻ 重新起局</button>
+              <button className="backbtn" style={{ marginLeft: 10 }} disabled={loading} title={loading ? "AI 正在回复，请等它说完再重新起局" : undefined} onClick={() => resetForm(selected)}>↻ 重新起局</button>
             )}
           </div>
         )}
@@ -1862,33 +2072,75 @@ function AppInner() {
               <div className="fgrid">
                 <div>
                   {selected === "bazi" && (() => {
+                    const thisYear = new Date().getFullYear();
+                    const yearOptions = Array.from({ length: thisYear - 1900 + 1 }, (_, i) => thisYear - i);
                     const leapMonthOfYear = baziCalendar === "lunar" && baziYear ? getLunarLeapMonth(baziYear) : 0;
-                    const showLeapCheck = leapMonthOfYear > 0 && Number(baziMonth) === leapMonthOfYear;
+
+                    // 月份下拉：农历模式下，当年有闰月的那个月额外多一个"闰X月"选项；用 "L5" 这种编码表示闰5月
+                    const monthOptions = [];
+                    for (let m = 1; m <= 12; m++) {
+                      monthOptions.push({ value: String(m), label: `${m}月` });
+                      if (baziCalendar === "lunar" && m === leapMonthOfYear) {
+                        monthOptions.push({ value: `L${m}`, label: `闰${m}月` });
+                      }
+                    }
+                    const monthValue = baziMonth ? `${baziLeapMonth ? "L" : ""}${baziMonth}` : "";
+                    function handleMonthChange(v) {
+                      const isLeap = v.startsWith("L");
+                      const m = isLeap ? v.slice(1) : v;
+                      setBaziMonth(m);
+                      setBaziLeapMonth(isLeap);
+                      const max = baziCalendar === "lunar" ? daysInLunarMonth(baziYear, m, isLeap) : daysInSolarMonth(baziYear, m);
+                      if (max > 0 && Number(baziDay) > max) setBaziDay(String(max));
+                    }
+                    function handleYearChange(y) {
+                      setBaziYear(y);
+                      if (baziMonth) {
+                        const stillLeap = baziCalendar === "lunar" && baziLeapMonth && getLunarLeapMonth(y) === Number(baziMonth);
+                        if (baziCalendar === "lunar" && baziLeapMonth && !stillLeap) setBaziLeapMonth(false); // 换年后闰月不存在了，自动退回普通月
+                        const max = baziCalendar === "lunar" ? daysInLunarMonth(y, baziMonth, stillLeap) : daysInSolarMonth(y, baziMonth);
+                        if (max > 0 && Number(baziDay) > max) setBaziDay(String(max));
+                      }
+                    }
+                    const maxDay = baziYear && baziMonth
+                      ? (baziCalendar === "lunar" ? daysInLunarMonth(baziYear, baziMonth, baziLeapMonth) : daysInSolarMonth(baziYear, baziMonth))
+                      : 31;
+                    const dayOptions = Array.from({ length: Math.max(maxDay, 1) }, (_, i) => i + 1);
+
                     return (
                       <>
                         <label className="flabel">历法</label>
                         <div className="spread" style={{ marginBottom: 14 }}>
-                          <button type="button" className={baziCalendar === "solar" ? "on" : ""} onClick={() => setBaziCalendar("solar")}>新历（公历）</button>
+                          <button type="button" className={baziCalendar === "solar" ? "on" : ""} onClick={() => { setBaziCalendar("solar"); setBaziLeapMonth(false); }}>新历（公历）</button>
                           <button type="button" className={baziCalendar === "lunar" ? "on" : ""} onClick={() => setBaziCalendar("lunar")}>农历</button>
                         </div>
 
                         <label className="flabel">出生年 · 月 · 日</label>
-                        <div className="ymdrow" style={{ marginBottom: 8 }}>
-                          <input className="fin" type="number" placeholder="年 如 1990" value={baziYear} onChange={(e) => setBaziYear(e.target.value)} />
-                          <input className="fin" type="number" placeholder="月" min="1" max="12" value={baziMonth} onChange={(e) => setBaziMonth(e.target.value)} />
-                          <input className="fin" type="number" placeholder="日" min="1" max="31" value={baziDay} onChange={(e) => setBaziDay(e.target.value)} />
+                        <div className="ymdrow" style={{ marginBottom: 14 }}>
+                          <select className="selbox" value={baziYear} onChange={(e) => handleYearChange(e.target.value)}>
+                            <option value="">年</option>
+                            {yearOptions.map((y) => <option key={y} value={y}>{y}年</option>)}
+                          </select>
+                          <select className="selbox" value={monthValue} onChange={(e) => handleMonthChange(e.target.value)}>
+                            <option value="">月</option>
+                            {monthOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                          <select className="selbox" value={baziDay} onChange={(e) => setBaziDay(e.target.value)}>
+                            <option value="">日</option>
+                            {dayOptions.map((d) => <option key={d} value={d}>{d}日</option>)}
+                          </select>
                         </div>
-                        {showLeapCheck && (
-                          <label className="checkline" style={{ marginBottom: 14 }}>
-                            <input type="checkbox" checked={baziLeapMonth} onChange={(e) => setBaziLeapMonth(e.target.checked)} />
-                            这是闰{leapMonthOfYear}月（{baziYear}年农历有闰{leapMonthOfYear}月）
-                          </label>
-                        )}
 
                         <label className="flabel">出生时间</label>
                         <div className="frow" style={{ marginBottom: 10 }}>
-                          <input className="fin" type="number" placeholder="时 0-23" min="0" max="23" disabled={baziHourUnknown} value={baziHour} onChange={(e) => setBaziHour(e.target.value)} />
-                          <input className="fin" type="number" placeholder="分（选填）" min="0" max="59" disabled={baziHourUnknown} value={baziMinute} onChange={(e) => setBaziMinute(e.target.value)} />
+                          <select className="selbox" disabled={baziHourUnknown} value={baziHour} onChange={(e) => setBaziHour(e.target.value)}>
+                            <option value="">时</option>
+                            {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{h}时</option>)}
+                          </select>
+                          <select className="selbox" disabled={baziHourUnknown} value={baziMinute} onChange={(e) => setBaziMinute(e.target.value)}>
+                            <option value="0">0分</option>
+                            {Array.from({ length: 11 }, (_, i) => (i + 1) * 5).map((m) => <option key={m} value={m}>{m}分</option>)}
+                          </select>
                         </div>
                         <label className="checkline" style={{ marginBottom: 10 }}>
                           <input type="checkbox" checked={baziHourUnknown} onChange={(e) => { setBaziHourUnknown(e.target.checked); if (!e.target.checked) setShichenOpen(false); }} />
@@ -2148,5 +2400,6 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
 
 
