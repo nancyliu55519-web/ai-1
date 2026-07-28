@@ -650,10 +650,19 @@ function computeQimenFull(date) {
   // 值符随时干飞宫：时干若为甲，用甲所隐的六仪(=旬首对应之仪)的宫位；否则直接查该时干在地盘的宫位
   const zhiFuGong = hourInfo.stem === "甲" ? baseGong : stemToPalace[hourInfo.stem];
 
-  // 值使随时辰走门：从旬首所在宫起，按阳顺阴逆走 stepsInXun 格
+  // 值使随时辰走门：从旬首所在宫起，按阳顺阴逆走 stepsInXun 格（经过中5）
   let zhiShiGong = baseGong;
   for (let s = 0; s < hourInfo.stepsInXun; s++) zhiShiGong = wrapPalace(zhiShiGong + dir);
-  const zhiShiDisplayGong = zhiShiGong === 5 ? 2 : zhiShiGong; // 中五寄二
+  const jiGong = juInfo.dunType === "阳遁" ? 8 : 2; // 中5寄宫：阳遁寄艮8、阴遁寄坤2
+  const zhiShiDisplayGong = zhiShiGong === 5 ? jiGong : zhiShiGong;
+
+  // ---- 九宫完整飞盘（规则已用《奇门真传》阳遁三局例子逐宫验证）----
+  const shiGanGong = hourInfo.stem === "甲" ? baseGong : stemToPalace[hourInfo.stem];
+  const fullPan = buildQimenNineGong({
+    stemToPalace, dir, baseGong,
+    shiGanGong,
+    zhiShiRawGong: zhiShiDisplayGong,
+  });
 
   return {
     ...juInfo,
@@ -663,10 +672,73 @@ function computeQimenFull(date) {
     xunYi,
     baseGong,
     zhiFuStar,
-    zhiFuGong,
+    zhiFuGong: shiGanGong === 5 ? 2 : shiGanGong,
     zhiShiDoor,
     zhiShiGong: zhiShiDisplayGong,
+    fullPan,
   };
+}
+
+// 本位：九宫五行、九星本位、八门本位
+const QM_STAR_HOME = { 1: "天蓬", 2: "天芮", 3: "天冲", 4: "天辅", 5: "天禽", 6: "天心", 7: "天柱", 8: "天任", 9: "天英" };
+const QM_DOOR_HOME = { 1: "休门", 2: "死门", 3: "伤门", 4: "杜门", 6: "开门", 7: "惊门", 8: "生门", 9: "景门" };
+const QM_GONG_WX = { 1: "水", 2: "土", 3: "木", 4: "木", 5: "土", 6: "金", 7: "金", 8: "土", 9: "火" };
+// 飞泊轨道（均已用《奇门真传》例子验证）
+const QM_STAR_ORBIT = [1, 2, 4, 8, 7, 6, 9, 3]; // 九星
+const QM_DOOR_ORBIT = [1, 6, 7, 2, 9, 4, 3, 8]; // 八门
+const QM_RING = [1, 8, 3, 4, 9, 2, 7, 6];       // 八神（洛书顺时针宫环）
+const QM_GODS = ["值符", "腾蛇", "太阴", "六合", "白虎", "玄武", "九地", "九天"];
+
+// 构建九宫完整飞盘：天盘干、地盘干、九星、八门、八神
+function buildQimenNineGong({ stemToPalace, dir, baseGong, shiGanGong, zhiShiRawGong }) {
+  const palaceToStem = {};
+  Object.entries(stemToPalace).forEach(([stem, g]) => { palaceToStem[g] = stem; });
+  const norm = (g) => (g === 5 ? 2 : g);
+
+  // 九星：值符星从 baseGong 飞到 shiGanGong（home→dest 正向放置）
+  const star = {}, tian = {};
+  const starShift = mod(QM_STAR_ORBIT.indexOf(norm(shiGanGong)) - QM_STAR_ORBIT.indexOf(norm(baseGong)), 8);
+  for (const home of QM_STAR_ORBIT) {
+    const dst = QM_STAR_ORBIT[mod(QM_STAR_ORBIT.indexOf(home) + starShift, 8)];
+    star[dst] = QM_STAR_HOME[home];
+    let tg = palaceToStem[home];
+    if (home === 2 && !tg) tg = palaceToStem[5]; // 中5地盘干寄坤2
+    tian[dst] = tg || "";
+  }
+  // 八门：值使门从 baseGong 飞到 zhiShiRawGong
+  const door = {};
+  const doorShift = mod(QM_DOOR_ORBIT.indexOf(norm(zhiShiRawGong)) - QM_DOOR_ORBIT.indexOf(norm(baseGong)), 8);
+  for (const home of QM_DOOR_ORBIT) {
+    const dst = QM_DOOR_ORBIT[mod(QM_DOOR_ORBIT.indexOf(home) + doorShift, 8)];
+    door[dst] = QM_DOOR_HOME[home];
+  }
+  // 八神：值符神从 shiGanGong（值符宫）起，顺时针布洛书环
+  const god = {};
+  const iZ = QM_RING.indexOf(norm(shiGanGong));
+  for (let k = 0; k < 8; k++) god[QM_RING[mod(iZ + k, 8)]] = QM_GODS[k];
+
+  const zhiFuDisp = norm(shiGanGong);
+  const zhiShiDisp = norm(zhiShiRawGong);
+  const gongs = {};
+  for (let g = 1; g <= 9; g++) {
+    if (g === 5) {
+      gongs[5] = { gong: 5, name: "中", wx: "土", diStem: palaceToStem[5] || "", tianStem: "", star: "天禽", door: "", god: "", isZhiFu: false, isZhiShi: false };
+      continue;
+    }
+    gongs[g] = {
+      gong: g,
+      name: PALACE_NAMES[g],
+      wx: QM_GONG_WX[g],
+      diStem: palaceToStem[g] || "",
+      tianStem: tian[g] || "",
+      star: star[g] || "",
+      door: door[g] || "",
+      god: god[g] || "",
+      isZhiFu: g === zhiFuDisp,
+      isZhiShi: g === zhiShiDisp,
+    };
+  }
+  return gongs;
 }
 
 const SIX_PALACES = ["大安", "留连", "速喜", "赤口", "小吉", "空亡"];
@@ -1008,7 +1080,7 @@ function buildCastContext(systemId, extra) {
         `${Object.entries(extra.diPan).map(([stem, gong]) => `${stem}在${gong}宫(${PALACE_NAMES[gong]})`).join("、")}\n` +
         `当前时辰：${extra.hourInfo.text}（旬首：${extra.xunYi}在${extra.baseGong}宫）\n` +
         `值符星：${extra.zhiFuStar}飞临${extra.zhiFuGong}宫(${PALACE_NAMES[extra.zhiFuGong]})；值使门：${extra.zhiShiDoor}行至${extra.zhiShiGong}宫(${PALACE_NAMES[extra.zhiShiGong]})\n` +
-        `其余七星七门按九星固定序（天蓬天芮天冲天辅天禽天心天柱天任天英）、八门固定序推排，中五宫寄坤二宫。断法参酌 ${QIMEN_CLASSICS.join("、")} 的传统体系。\n\n` +
+        `完整九宫盘（天盘干/地盘干·九星·八门·八神）：${[1,2,3,4,5,6,7,8,9].map((g)=>{const c=extra.fullPan&&extra.fullPan[g];if(!c)return "";if(g===5)return `中5宫[地盘${c.diStem}·天禽]`;return `${g}宫${c.name}[${c.tianStem}/${c.diStem}·${c.star}·${c.door}·${c.god}]`;}).filter(Boolean).join("；")}。断法参酌 ${QIMEN_CLASSICS.join("、")} 的传统体系。\n\n` +
         `【奇门遁甲专用断法要求——务必遵守】\n` +
         `- 奇门遁甲以盘断事，不是聊天讲道理。这一局怎么答，答案必须从值符值使、九星八门、宫位生克、三奇六仪里面找，不是从「人生道理」「情绪安慰」里面找。\n` +
         `- 每一句实质性的话都要挂靠到具体的盘面元素上（某星临某宫、某门旺衰、值符值使的位置关系等），不能脱离盘面讲空泛的大道理或纯安慰话。\n` +
@@ -1281,6 +1353,26 @@ const DESIGN_CSS = `
 .lr-name{padding:3px 10px 7px;font-size:14px;font-family:var(--serif);font-weight:700;color:var(--ink)}
 .lr-wx{margin-top:auto;text-align:center;color:#F5EFE3;font-size:11px;padding:3px 0;letter-spacing:.3em;opacity:.92}
 @media(max-width:520px){.lr-gz{font-size:13px}.lr-cell{min-width:0}.lr-top{padding:6px 7px 0;font-size:11px}.lr-name,.lr-qin,.lr-gz{padding-left:7px;padding-right:7px}}
+.qm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:14px}
+.qm-cell{background:rgba(42,37,30,.7);border:1px solid var(--line2);border-radius:8px;padding:8px 8px;min-height:92px;display:flex;flex-direction:column;gap:2px}
+.qm-cell.zhifu{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.qm-cell.zhishi{border-color:var(--jade)}
+.qm-center{align-items:center;justify-content:center;gap:3px;background:rgba(30,26,21,.9)}
+.qm-god{font-size:10px;color:var(--jade);letter-spacing:.05em}
+.qm-cell.zhifu .qm-god{color:var(--gold-lt)}
+.qm-row1{display:flex;justify-content:space-between;font-size:12px}
+.qm-star{color:var(--ink2);font-weight:600}
+.qm-door{color:var(--gold-txt);font-weight:600}
+.qm-gan{text-align:center;font-family:var(--serif);font-size:16px;color:var(--gold-lt);letter-spacing:.05em}
+.qm-tian{color:var(--gold-lt)}
+.qm-slash{color:var(--ink-sub);font-size:11px;margin:0 2px}
+.qm-di{color:var(--ink3)}
+.qm-row3{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--ink-sub);margin-top:auto}
+.qm-wx{color:var(--ink-sub)}
+.qm-digit{font-size:11px;color:var(--ink-sub)}
+.qm-center .qm-name{font-size:11px;color:var(--ink-sub)}
+.qm-center .qm-di{font-family:var(--serif);font-size:18px;color:var(--gold-lt)}
+@media(max-width:520px){.qm-gan{font-size:14px}.qm-cell{padding:6px 5px;min-height:82px;gap:1px}.qm-row1{font-size:10px}.qm-god,.qm-row3{font-size:9px}}
 `;
 
 function Kicker({ code, label, onDark }) {
@@ -1550,6 +1642,29 @@ function AppInner() {
       return next;
     });
   }
+  // 从历史点进去继续对话：恢复盘面、上下文、消息，回到对话页
+  function resumeHistory(h) {
+    if (loading) return;
+    abandonEmptyHistoryEntry();
+    if (h.isLearn) {
+      setLearnMode(true);
+      setSelected(null);
+      setCastInfo(null);
+      setCastContext("");
+    } else {
+      setLearnMode(false);
+      setSelected(h.systemId);
+      setCastInfo(h.castInfo || null);
+      setCastContext(h.castContext || "");
+    }
+    setMessages(Array.isArray(h.messages) ? h.messages : []);
+    setError("");
+    setInput("");
+    if (typeof setPendingImage === "function") setPendingImage(null);
+    currentHistoryRef.current = { ...h };
+    setPhase("chat");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   // 离开/重置当前这一局时，如果它还是个从没发过消息的空壳（messages为空），顺手删掉，不留僵尸记录
   function abandonEmptyHistoryEntry() {
     const cur = currentHistoryRef.current;
@@ -1574,16 +1689,30 @@ function AppInner() {
     setSelected(null);
     setCastContext("");
     setCastInfo(null);
-    setMessages([
-      { role: "assistant", content: "来啦～我可以教你八字、小六壬、奇门、梅花、六爻、塔罗这些。你想先学哪一个？如果还没头绪，我建议从八字入门（先认十天干、十二地支和五行），要从这儿开始吗？" },
-    ]);
+    const greeting = { role: "assistant", content: "来啦～我可以教你八字、小六壬、奇门、梅花、六爻、塔罗这些。你想先学哪一个？如果还没头绪，我建议从八字入门（先认十天干、十二地支和五行），要从这儿开始吗？" };
+    setMessages([greeting]);
     setInput("");
     setError("");
     setPhase("chat");
-    currentHistoryRef.current = null; // 学习模式不写入问卜历史
+    // 学习模式也建一条历史记录（点进历史能继续学）
+    const hid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const historyEntry = {
+      id: hid,
+      systemId: "learn",
+      systemName: "术数课堂",
+      isLearn: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      castSummary: "学习模式 · 跟AI老师学术数",
+      castInfo: null,
+      castContext: "",
+      messages: [],
+    };
+    currentHistoryRef.current = historyEntry;
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function exitLearnMode() {
+    abandonEmptyHistoryEntry();
     setLearnMode(false);
     setMessages([]);
     setPhase("home");
@@ -1743,6 +1872,7 @@ function AppInner() {
       updatedAt: Date.now(),
       castSummary: castSummaryFor(id, cast),
       castInfo: cast,
+      castContext: ctx,
       messages: [],
     };
     currentHistoryRef.current = historyEntry;
@@ -2021,11 +2151,38 @@ function AppInner() {
       );
     }
     if (c.type === "qimen") {
+      // 洛书九宫布局：巽4 离9 坤2 / 震3 中5 兑7 / 艮8 坎1 乾6
+      const layout = [4, 9, 2, 3, 5, 7, 8, 1, 6];
+      const fp = c.fullPan || {};
       return (
         <>
           {row("定局", `${c.period} · ${c.yuanName} · ${c.dunType}${c.ju}局`, "q1")}
           {row("值符", `${c.zhiFuStar} 临 ${PALACE_NAMES[c.zhiFuGong]}宫`, "q2")}
           {row("值使", `${c.zhiShiDoor} 行至 ${PALACE_NAMES[c.zhiShiGong]}宫`, "q3")}
+          {c.fullPan && (
+            <div className="qm-grid">
+              {layout.map((g) => {
+                const cell = fp[g] || {};
+                if (g === 5) {
+                  return (
+                    <div className="qm-cell qm-center" key={g}>
+                      <div className="qm-digit">五</div>
+                      <div className="qm-di">{cell.diStem}</div>
+                      <div className="qm-name">中宫</div>
+                    </div>
+                  );
+                }
+                return (
+                  <div className={"qm-cell" + (cell.isZhiFu ? " zhifu" : "") + (cell.isZhiShi ? " zhishi" : "")} key={g}>
+                    <div className="qm-god">{cell.god}{cell.isZhiFu && "·符"}{cell.isZhiShi && "·使"}</div>
+                    <div className="qm-row1"><span className="qm-star">{cell.star}</span><span className="qm-door">{cell.door}</span></div>
+                    <div className="qm-gan"><span className="qm-tian">{cell.tianStem}</span><span className="qm-slash">/</span><span className="qm-di">{cell.diStem}</span></div>
+                    <div className="qm-row3"><span className="qm-name">{cell.name}{g}宫</span><span className="qm-wx">{cell.wx}</span></div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       );
     }
@@ -2123,6 +2280,18 @@ function AppInner() {
           </div>
         </header>
 
+        {/* 术数课堂入口（置顶） */}
+        <section className="section">
+          <button className="learn-entry" onClick={enterLearnMode}>
+            <div className="learn-entry-l">
+              <div className="learn-kicker">STUDY · 术数课堂</div>
+              <div className="learn-title">跟AI老师学术数</div>
+              <div className="learn-sub">八字 · 小六壬 · 奇门 · 梅花 · 六爻 · 塔罗，一对一问答式入门，从零学起</div>
+            </div>
+            <div className="learn-entry-r">进入课堂 →</div>
+          </button>
+        </section>
+
         {/* CHAPTER 01 · 择体系 */}
         <section className="section">
           <div className="sec-head">
@@ -2143,18 +2312,6 @@ function AppInner() {
               );
             })}
           </div>
-        </section>
-
-        {/* 学习模式入口 */}
-        <section className="section">
-          <button className="learn-entry" onClick={enterLearnMode}>
-            <div className="learn-entry-l">
-              <div className="learn-kicker">STUDY · 学习模式</div>
-              <div className="learn-title">跟AI老师学术数</div>
-              <div className="learn-sub">八字 · 小六壬 · 奇门 · 梅花 · 六爻 · 塔罗，一对一问答式入门，从零学起</div>
-            </div>
-            <div className="learn-entry-r">开始学习 →</div>
-          </button>
         </section>
 
         {historyList.length > 0 && (
@@ -2192,6 +2349,9 @@ function AppInner() {
                       ))
                     )}
                     <div className="btn-row" style={{ marginTop: 14 }}>
+                      {h.messages.length > 0 && (
+                        <button type="button" className="btn" onClick={() => resumeHistory(h)}>继续这局对话 →</button>
+                      )}
                       <button type="button" className="btn ghost" onClick={() => deleteHistoryEntry(h.id)}>删除这条记录</button>
                     </div>
                   </div>
@@ -2571,6 +2731,5 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
 
 
