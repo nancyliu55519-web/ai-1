@@ -685,12 +685,53 @@ function computeXiaoLiuRen(lunarMonth, lunarDay, hour) {
   if (!Number.isFinite(lunarMonth) || !Number.isFinite(lunarDay) || !Number.isFinite(hour)) {
     throw new Error("起课数据不对，请重新填写");
   }
-  const hourNum = mod(Math.floor((hour + 1) / 2), 12) + 1;
-  let idx = mod(lunarMonth - 1, 6);
-  idx = mod(idx + (lunarDay - 1), 6);
-  idx = mod(idx + (hourNum - 1), 6);
-  const palace = SIX_PALACES[idx];
-  return { palace, hourNum, info: SIX_PALACE_INFO[palace] };
+  const hourNum = mod(Math.floor((hour + 1) / 2), 12) + 1; // 1=子..12=亥
+  // 大安起「月」，数到月落宫；再从月宫数「日」得日宫；再从日宫数「时辰」得自身宫
+  const monthIdx = mod(lunarMonth - 1, 6);
+  const dayIdx = mod(monthIdx + (lunarDay - 1), 6);      // 「日」落宫
+  const selfIdx = mod(dayIdx + (hourNum - 1), 6);         // 自身宫（时辰落宫）
+  const selfBranchIdx = mod(hourNum - 1, 12);             // 自身宫地支=时辰地支（子=0..亥=11）
+  const palace = SIX_PALACES[selfIdx];
+  return { palace, hourNum, info: SIX_PALACE_INFO[palace], selfIdx, dayIdx, selfBranchIdx };
+}
+
+// —— 小六壬完整排盘（严格按《小六壬》典籍规则）——
+// 装六神：以地支为准。寅卯青龙、巳午朱雀、丑辰勾陈、未戌腾蛇、申酉白虎、亥子玄武
+const LR_GOD_BY_BRANCH = { 寅: "青龙", 卯: "青龙", 巳: "朱雀", 午: "朱雀", 丑: "勾陈", 辰: "勾陈", 未: "腾蛇", 戌: "腾蛇", 申: "白虎", 酉: "白虎", 亥: "玄武", 子: "玄武" };
+// 起五星（天盘星）：以「日」落宫为准，从日宫起顺排 木火土金水天空
+const LR_FIVE_STARS = ["木星", "火星", "土星", "金星", "水星", "天空"];
+const LR_PALACE_WUXING = { 大安: "木", 留连: "土", 速喜: "火", 赤口: "金", 小吉: "水", 空亡: "土" };
+const LR_BRANCH_WX = { 子: "水", 丑: "土", 寅: "木", 卯: "木", 辰: "土", 巳: "火", 午: "火", 未: "土", 申: "金", 酉: "金", 戌: "土", 亥: "水" };
+
+// dayIdx=「日」落宫序，selfIdx=自身宫（时辰落宫）序；从自身宫隔位（+2）顺排地支
+function computeLiurenFullPan(dayIdx, selfIdx, selfBranchIdx) {
+  const sheng = { 木: "火", 火: "土", 土: "金", 金: "水", 水: "木" };
+  const ke = { 木: "土", 土: "水", 水: "火", 火: "金", 金: "木" };
+  // 从自身宫起，沿宫序每宫地支隔位(+2)顺排
+  const palaces = SIX_PALACES.map((name, i) => {
+    const off = mod(i - selfIdx, 6);
+    const branch = BRANCHES[mod(selfBranchIdx + 2 * off, 12)];
+    const branchWx = LR_BRANCH_WX[branch];
+    // 五星：从「日」宫起木星顺排
+    const starOff = mod(i - dayIdx, 6);
+    return {
+      name, palaceWx: LR_PALACE_WUXING[name],
+      branch, branchWx,
+      god: LR_GOD_BY_BRANCH[branch],
+      star: LR_FIVE_STARS[starOff],
+      isSelf: i === selfIdx, isDay: i === dayIdx,
+    };
+  });
+  const selfWx = palaces[selfIdx].branchWx;
+  for (const p of palaces) {
+    if (p.isSelf) p.qin = "自身";
+    else if (p.branchWx === selfWx) p.qin = "兄弟";
+    else if (sheng[p.branchWx] === selfWx) p.qin = "父母";
+    else if (sheng[selfWx] === p.branchWx) p.qin = "子孙";
+    else if (ke[selfWx] === p.branchWx) p.qin = "妻财";
+    else p.qin = "官鬼";
+  }
+  return palaces;
 }
 
 /* ---------------- 八卦 / 六十四卦 数据（供梅花、六爻确定性排卦） ---------------- */
@@ -917,12 +958,14 @@ const LEARN_STYLE = `你是一位耐心、亲切的中国传统术数老师，�
 function buildCastContext(systemId, extra) {
   switch (systemId) {
     case "liuren": {
-      const info = extra.info || {};
       const dayLabel = extra.isReportedDay ? `随口报数 ${extra.lunarDay}（代入「日」）` : `农历 ${extra.lunarDay} 日`;
+      const panText = (extra.pan || [])
+        .map((p) => `${p.name}宫[宫${p.palaceWx}·天盘${p.star}]装${p.branch}(${p.branchWx})六神${p.god}为${p.qin}${p.isSelf ? "（自身/时）" : p.isDay ? "（日）" : ""}`)
+        .join("；");
       return (
-        `【本局背景·小六壬】已按农历 ${extra.lunarMonth} 月、${dayLabel}、第${extra.hourNum}个时辰（子时为1）掐指起课，落于「${extra.palace}」宫。全程依据「${extra.palace}」宫来聊，不要改变宫位、不要重新起课。\n` +
-        `「${extra.palace}」宫对应：五行${info.wuxing}，六亲主${info.liuqin}，六神${info.liushen}，星曜${info.star}，方位${info.fangwei}，多应${info.renwu}，身体应${info.shenti}。传统断意：${info.yingqi}。\n` +
-        `请把六亲、六神、星曜这些对应结合进解读里（用大白话讲清楚它们分别指什么、对这件事意味着什么），不要只甩一个孤零零的宫名就完事。断法参酌 ${LIUREN_CLASSICS.slice(0, 4).join("、")} 等传统技法。`
+        `【本局背景·小六壬（完整六宫盘）】已按农历 ${extra.lunarMonth} 月、${dayLabel}、第${extra.hourNum}个时辰掐指起课，自身落于「${extra.palace}」宫。全程依据此盘来聊，不要改变盘面、不要重新起课。\n` +
+        `六宫全盘：${panText}。\n` +
+        `断法要求：以自身宫「${extra.palace}」为体，结合各宫的六神、天盘星、装地支五行、六亲，按「问什么事就重点看对应六亲所落之宫」来断——问感情看妻财/官鬼、问长辈文书看父母、问财看妻财、问子女晚辈看子孙、问同辈竞争看兄弟，再参看该宫六神与宫位五行的生克关系。用大白话讲清楚每个对应指什么，不要只甩一个孤零零的宫名。断法参酌 ${LIUREN_CLASSICS.slice(0, 4).join("、")} 等传统技法。`
       );
     }
     case "bazi": {
@@ -1226,6 +1269,18 @@ const DESIGN_CSS = `
 .learn-sub{font-size:12.5px;color:var(--ink-sub);line-height:1.6}
 .learn-entry-r{flex:0 0 auto;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--gold);white-space:nowrap}
 @media(max-width:520px){.learn-entry{flex-direction:column;align-items:flex-start;gap:12px}}
+.lr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}
+.lr-cell{background:rgba(42,37,30,.7);border:1px solid var(--line2);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;color:var(--ink3)}
+.lr-cell.self{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.lr-top{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 0;font-size:12px}
+.lr-god{color:var(--ink2);font-weight:600}
+.lr-star{color:var(--gold-txt);font-family:var(--serif)}
+.lr-gz{padding:6px 10px 0;font-size:15px;font-family:var(--serif);color:var(--ink)}
+.lr-gz em{font-style:normal;font-size:10px;color:var(--ink-sub);margin-left:1px}
+.lr-qin{padding:3px 10px 0;font-size:11px;color:var(--gold-lt);text-align:right}
+.lr-name{padding:3px 10px 7px;font-size:14px;font-family:var(--serif);font-weight:700;color:var(--ink)}
+.lr-wx{margin-top:auto;text-align:center;color:#F5EFE3;font-size:11px;padding:3px 0;letter-spacing:.3em;opacity:.92}
+@media(max-width:520px){.lr-gz{font-size:13px}.lr-cell{min-width:0}.lr-top{padding:6px 7px 0;font-size:11px}.lr-name,.lr-qin,.lr-gz{padding-left:7px;padding-right:7px}}
 `;
 
 function Kicker({ code, label, onDark }) {
@@ -1626,15 +1681,18 @@ function AppInner() {
         isReportedDay = false;
       }
       const hourForCast = lu.chinaHour;
-      const { palace, hourNum, info } = computeXiaoLiuRen(Number(lm), Number(ld), hourForCast);
+      const liurenRes = computeXiaoLiuRen(Number(lm), Number(ld), hourForCast);
+      const { palace, hourNum, info, dayIdx, selfIdx, selfBranchIdx } = liurenRes;
+      const pan = computeLiurenFullPan(dayIdx, selfIdx, selfBranchIdx);
       extra.lunarMonth = Number(lm);
       extra.lunarDay = Number(ld);
       extra.hourNum = hourNum;
       extra.palace = palace;
       extra.info = info;
+      extra.pan = pan;
       extra.isReportedDay = isReportedDay;
       extra.mode = isReportedDay ? "报数起课（随口报一数代入「日」，月与时辰仍按当下农历真实换算）" : "时间起课（按当下中国时间自动取农历月、日、时辰）";
-      cast = { type: "liuren", palace, hourNum, info, mode: extra.mode, lunarMonth: lm, lunarDay: ld, isReportedDay };
+      cast = { type: "liuren", palace, hourNum, info, pan, mode: extra.mode, lunarMonth: lm, lunarDay: ld, isReportedDay };
     } else if (id === "meihua") {
       const mh = computeMeihua(opts.numbers || numbers, now);
       Object.assign(extra, mh);
@@ -1928,14 +1986,37 @@ function AppInner() {
     }
     if (c.type === "liuren") {
       const info = c.info || {};
+      const pan = c.pan;
+      // 展示顺序仿传统盘：上排 留连 速喜 赤口，下排 大安 空亡 小吉
+      const order = ["留连", "速喜", "赤口", "大安", "空亡", "小吉"];
+      const byName = {};
+      (pan || []).forEach((p) => { byName[p.name] = p; });
+      const wxColor = { 木: "#7BA05B", 火: "#C0504D", 土: "#8B6F47", 金: "#C9A227", 水: "#4A7BA6" };
       return (
         <>
-          {row("落宫", <span className="ser">{c.palace}</span>, "l1")}
-          {row("时辰", `第 ${c.hourNum} 个时辰`, "l2")}
-          {c.mode && row("起课", c.mode, "l3")}
-          {c.lunarMonth && row(c.isReportedDay ? "月 / 报数" : "农历", `${c.lunarMonth} 月 ${c.lunarDay} ${c.isReportedDay ? "（报数）" : "日"}`, "l4")}
-          {info.liuqin && row("六亲 · 六神", `${info.liuqin} · ${info.liushen}`, "l5")}
-          {info.star && row("星曜 · 方位", `${info.star} · ${info.fangwei}`, "l6")}
+          {row("起课", c.mode, "l3")}
+          {row("自身落宫", <span className="ser">{c.palace}</span>, "l1")}
+          {c.lunarMonth && row(c.isReportedDay ? "月 / 报数" : "农历", `${c.lunarMonth} 月 ${c.lunarDay} ${c.isReportedDay ? "（报数）" : "日"} · 第${c.hourNum}时辰`, "l4")}
+          {pan && (
+            <div className="lr-grid">
+              {order.map((nm) => {
+                const p = byName[nm];
+                if (!p) return null;
+                return (
+                  <div className={"lr-cell" + (p.isSelf ? " self" : "")} key={nm}>
+                    <div className="lr-top">
+                      <span className="lr-god">{p.god}</span>
+                      <span className="lr-star">{p.star}</span>
+                    </div>
+                    <div className="lr-gz">{p.branch}<em>({p.branchWx})</em></div>
+                    <div className="lr-qin">{p.qin}{p.isSelf ? "·自身" : p.isDay ? "·日" : ""}</div>
+                    <div className="lr-name">{p.name}</div>
+                    <div className="lr-wx" style={{ background: wxColor[p.palaceWx] || "#8B6F47" }}>{p.palaceWx}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       );
     }
@@ -2490,7 +2571,6 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
 
 
 
