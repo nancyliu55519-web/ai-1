@@ -162,31 +162,31 @@ const TAROT_SPREADS = {
 
 // 「编年历」编辑排版设计系统 token（源自 MYSAO .dc.html 简报风格）
 const T = {
-  canvas: "#EAE2D3",
-  card: "#FFFCF7",
-  card2: "#FCFAF6",
-  card3: "#FAF7F1",
-  coffee: "#241C12",
-  coffeeDeep: "#15110B",
-  ink: "#241C12",
-  ink2: "#3A352E",
-  ink3: "#43403A",
-  inkSub: "#6B5440",
-  monoLabel: "#A08B6B",
-  gold: "#B8924A",
-  goldTxt: "#8A6D38",
-  goldLt: "#D8B878",
-  goldLt2: "#C9A35E",
-  goldBg: "#FBF3E2",
-  jade: "#2E7D55",
-  jadeBg: "#EAF3EC",
-  jadeBd: "#CDE5D5",
-  verm: "#B0463A",
-  vermBg: "#FBEAE7",
-  line: "#EFE7D8",
-  line2: "#EAE2D3",
-  cream: "#F3ECE0",
-  creamDim: "#CDBFA6",
+  canvas: "#151210",      // 暖黑主背景
+  card: "#211D18",        // 卡片深褐黑
+  card2: "#1C1915",       // 略深
+  card3: "#2A251E",       // 卡片hover/浅一档
+  coffee: "#0E0B08",      // 更深(用于对话气泡AI侧等)
+  coffeeDeep: "#0A0806",
+  ink: "#F3E8D2",         // 主文字：暖米金
+  ink2: "#E4D5B8",        // 次文字
+  ink3: "#D8C7A6",        // 正文
+  inkSub: "#A89377",      // 弱化文字
+  monoLabel: "#8A7355",   // mono标签
+  gold: "#C9A15A",        // 主金(铜金)
+  goldTxt: "#D9B978",     // 金色文字(深底上要更亮才看得清)
+  goldLt: "#E4C989",      // 亮金
+  goldLt2: "#B8894A",     // 暗铜金
+  goldBg: "#2E2415",      // 金色背景块(深底版)
+  jade: "#5FB88A",        // 翡翠绿(深底上提亮)
+  jadeBg: "#16241C",
+  jadeBd: "#2C4A3A",
+  verm: "#D9705F",        // 朱红(深底上提亮)
+  vermBg: "#2A1815",
+  line: "#332C22",        // 分隔线
+  line2: "#3A3226",       // 分隔线2
+  cream: "#241F18",
+  creamDim: "#5A4E3C",
 };
 
 /* ---------------- 干支基础算法（确定性计算，不依赖AI） ---------------- */
@@ -903,6 +903,16 @@ const CHAT_STYLE = `你是一位懂传统术数、又特别会跟普通人聊天
 - 如果遇到涉及赌博下注、买彩票、猜球赛比分这类问题，不要生硬拒绝或说教——可以顺着卦象聊聊这件事的成败态势、顺逆倾向、谁占优，但不要给出具体的下注号码、确切比分、买哪一注这种明确指向，也温和提醒一句这类事有风险、要理性、后果自负。
 - 如果用户发来图片（聊天截图、生活照、手相面相等），结合图片内容和当前卦象一起分析当下情况；对图片里的信息就事论事地讲，涉及相术时说明仅供参考、不下绝对结论。`;
 
+// 学习模式：AI 当术数老师，教用户八字、小六壬等知识
+const LEARN_STYLE = `你是一位耐心、亲切的中国传统术数老师，正在一对一教学员入门。教学范围包括：八字（四柱、十神、五行、大运流年）、小六壬（六宫、六神、六亲）、奇门遁甲、梅花易数、六爻、塔罗等。教学要求：
+- 用大白话讲，像老师带新手，循序渐进，别一上来堆术语；出现术语必须马上用生活化的例子解释清楚。
+- 每次讲一个小知识点就好，讲完可以问一句"这块懂了吗／要不要举个例子"，等学员回应再往下，像真的上课一样有来有回。
+- 学员问什么就顺着教什么；如果学员没方向，可以主动给个入门路线（比如学八字先认十天干十二地支→五行生克→排四柱→看十神），让他选从哪学起。
+- 鼓励为主，学员答错了温和纠正、给正确解释，别打击。
+- 可以留小练习、举实际例子帮助理解。
+- 只讲知识、教方法，不要给某个具体的人算命或下吉凶断语——这是教学，不是问卜。
+- 语气自然口语，别端着，回答别太长，一次一个重点，方便学员消化。`;
+
 // 生成某个体系"这一局的盘面背景"，作为 system 提示的一部分，让模型全程记住这个盘
 function buildCastContext(systemId, extra) {
   switch (systemId) {
@@ -1068,12 +1078,12 @@ const DESIGN_CSS = `
 .bubble.bot{align-self:flex-start;align-items:flex-start}
 .bubble .bot-name{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--gold-txt);margin:0 0 5px 4px}
 .bubble-body{padding:13px 17px;border-radius:16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:break-word}
-.bubble.me .bubble-body{background:#fff;color:var(--ink);border:1px solid var(--line2);border-bottom-right-radius:5px}
-.bubble.bot .bubble-body{background:var(--ink);color:#F5EFE3;border-bottom-left-radius:5px}
+.bubble.me .bubble-body{background:var(--gold-bg);color:var(--ink);border:1px solid var(--gold-lt2);border-bottom-right-radius:5px}
+.bubble.bot .bubble-body{background:var(--card3);color:var(--ink3);border:1px solid var(--line2);border-bottom-left-radius:5px}
 .bubble-body.typing{color:#C9B896;font-style:normal}
 .chat-input{position:sticky;bottom:12px;z-index:5;display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 10px 10px 16px;box-shadow:0 6px 24px rgba(58,42,26,.18)}
 .chat-box{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15px;line-height:1.6;color:var(--ink);resize:none;max-height:140px}
-.send-btn{flex:0 0 auto;background:var(--ink);color:#fff;border:0;border-radius:10px;padding:11px 20px;font-size:14px;cursor:pointer;transition:opacity .18s}
+.send-btn{flex:0 0 auto;background:var(--gold);color:#1A1510;border:0;border-radius:10px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .18s}
 .send-btn:disabled{opacity:.4;cursor:default}
 .img-btn{flex:0 0 auto;background:none;border:0;font-size:22px;cursor:pointer;padding:4px 6px;align-self:center}
 .bubble-img{max-width:180px;max-height:220px;border-radius:12px;margin-bottom:6px;display:block;object-fit:cover}
@@ -1196,6 +1206,26 @@ const DESIGN_CSS = `
 }
 .page,.wrap,.hero,.section,.castbar,.form-card,.result,.chat,.chat-input,.bubble{max-width:100%;overflow-wrap:break-word}
 .datarow .dv{overflow-wrap:break-word;min-width:0}
+.intro-screen{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at center,#1A1510 0%,#0A0806 100%);display:flex;align-items:center;justify-content:center;cursor:pointer;animation:introFade .8s ease-out}
+@keyframes introFade{from{opacity:0}to{opacity:1}}
+.intro-inner{display:flex;flex-direction:column;align-items:center;text-align:center;user-select:none}
+.intro-bagua{margin-bottom:26px}
+.intro-tri{transform-origin:100px 100px;animation:spin 60s linear infinite}
+.intro-taiji{transform-origin:100px 100px;animation:spinR 24s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spinR{to{transform:rotate(-360deg)}}
+.intro-title{font-family:var(--serif);font-weight:900;font-size:38px;letter-spacing:.32em;color:#E4C989;text-indent:.32em;margin-bottom:10px;text-shadow:0 0 24px rgba(201,161,90,.35)}
+.intro-sub{font-family:var(--mono);font-size:12px;letter-spacing:.28em;color:#A89377;text-indent:.28em;margin-bottom:38px}
+.intro-hint{font-size:13px;letter-spacing:.2em;color:#C9A15A;text-indent:.2em;animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.4}50%{opacity:1}}
+.learn-entry{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:linear-gradient(135deg,#2A2015 0%,#1C1712 100%);border:1px solid var(--gold-lt2);border-radius:12px;padding:22px 24px;cursor:pointer;transition:border-color .18s,transform .1s}
+.learn-entry:hover{border-color:var(--gold-lt)}
+.learn-entry:active{transform:scale(.995)}
+.learn-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--gold-txt);margin-bottom:8px}
+.learn-title{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--gold-lt);margin-bottom:6px}
+.learn-sub{font-size:12.5px;color:var(--ink-sub);line-height:1.6}
+.learn-entry-r{flex:0 0 auto;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--gold);white-space:nowrap}
+@media(max-width:520px){.learn-entry{flex-direction:column;align-items:flex-start;gap:12px}}
 `;
 
 function Kicker({ code, label, onDark }) {
@@ -1401,6 +1431,8 @@ function castSummaryFor(systemId, cast) {
 /* ---------------- 主组件 ---------------- */
 
 function AppInner() {
+  const [entered, setEntered] = useState(false); // 开场八卦画面 → 点击进入
+  const [learnMode, setLearnMode] = useState(false); // 学习模式（AI问答式教学）
   const [selected, setSelected] = useState(null);
   const [numbers, setNumbers] = useState("");
   const [tarotSpread, setTarotSpread] = useState("overall"); // 牌阵key
@@ -1463,23 +1495,6 @@ function AppInner() {
       return next;
     });
   }
-  // 从历史记录点进去继续对话：恢复该局的盘面、上下文、消息，切到对话页
-  function resumeHistory(h) {
-    if (loading) return;
-    // 若当前局是空壳，先清掉不留僵尸
-    abandonEmptyHistoryEntry();
-    setSelected(h.systemId);
-    setCastInfo(h.castInfo || null);
-    setCastContext(h.castContext || "");
-    setMessages(Array.isArray(h.messages) ? h.messages : []);
-    setError("");
-    setInput("");
-    setPendingImage && setPendingImage(null);
-    // 让后续发消息更新到这条记录上（沿用同一 id）
-    currentHistoryRef.current = { ...h };
-    setPhase("chat");
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-  }
   // 离开/重置当前这一局时，如果它还是个从没发过消息的空壳（messages为空），顺手删掉，不留僵尸记录
   function abandonEmptyHistoryEntry() {
     const cur = currentHistoryRef.current;
@@ -1495,6 +1510,29 @@ function AppInner() {
 
   // 需要先填资料/选项的体系
   const NEEDS_SETUP = { bazi: true, liuren: true, tarot: true, meihua: true };
+
+  // 进入学习模式：清空对话，用教学提示开场
+  function enterLearnMode() {
+    if (loading) return;
+    abandonEmptyHistoryEntry();
+    setLearnMode(true);
+    setSelected(null);
+    setCastContext("");
+    setCastInfo(null);
+    setMessages([
+      { role: "assistant", content: "来啦～我可以教你八字、小六壬、奇门、梅花、六爻、塔罗这些。你想先学哪一个？如果还没头绪，我建议从八字入门（先认十天干、十二地支和五行），要从这儿开始吗？" },
+    ]);
+    setInput("");
+    setError("");
+    setPhase("chat");
+    currentHistoryRef.current = null; // 学习模式不写入问卜历史
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function exitLearnMode() {
+    setLearnMode(false);
+    setMessages([]);
+    setPhase("home");
+  }
 
   function resetForm(id) {
     if (loading) return; // AI 正在回复时不允许切走，避免旧请求返回后把回复错接到新的一局上
@@ -1647,7 +1685,6 @@ function AppInner() {
       updatedAt: Date.now(),
       castSummary: castSummaryFor(id, cast),
       castInfo: cast,
-      castContext: ctx,
       messages: [],
     };
     currentHistoryRef.current = historyEntry;
@@ -1712,7 +1749,7 @@ function AppInner() {
 
     // 奇门遁甲/六爻：如果还没起盘（进页面没自动起），现在才按用户问出的这一刻起盘/摇卦
     let effectiveContext = castContext;
-    if ((selected === "qimen" || selected === "liuyao") && !castContext) {
+    if (!learnMode && (selected === "qimen" || selected === "liuyao") && !castContext) {
       effectiveContext = startCast(selected, { keepMessages: true });
       if (!effectiveContext) {
         // startCast 内部已经 setError 了；把用户输入的内容还回去，不要吞掉
@@ -1746,7 +1783,7 @@ function AppInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: CHAT_STYLE + "\n\n" + effectiveContext,
+          system: learnMode ? LEARN_STYLE : (CHAT_STYLE + "\n\n" + effectiveContext),
           messages: apiMessages,
         }),
       });
@@ -1933,6 +1970,51 @@ function AppInner() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');`}</style>
       <style>{DESIGN_CSS}</style>
 
+      {!entered && (
+        <div className="intro-screen" onClick={() => setEntered(true)}>
+          <div className="intro-inner">
+            <svg className="intro-bagua" viewBox="0 0 200 200" width="230" height="230">
+              {/* 八卦八个卦象，环绕 */}
+              <g className="intro-tri">
+                {[
+                  { a: 0, lines: [1, 1, 1] },   // 乾
+                  { a: 45, lines: [1, 1, 0] },
+                  { a: 90, lines: [0, 1, 0] },
+                  { a: 135, lines: [0, 0, 0] }, // 坤
+                  { a: 180, lines: [0, 0, 1] },
+                  { a: 225, lines: [1, 0, 1] },
+                  { a: 270, lines: [1, 0, 0] },
+                  { a: 315, lines: [0, 1, 1] },
+                ].map((t, i) => (
+                  <g key={i} transform={`rotate(${t.a} 100 100)`}>
+                    {t.lines.map((ln, j) => (
+                      ln === 1 ? (
+                        <rect key={j} x="90" y={4 + j * 7} width="20" height="4" rx="1" fill="#C9A15A" />
+                      ) : (
+                        <g key={j}>
+                          <rect x="90" y={4 + j * 7} width="8" height="4" rx="1" fill="#C9A15A" />
+                          <rect x="102" y={4 + j * 7} width="8" height="4" rx="1" fill="#C9A15A" />
+                        </g>
+                      )
+                    ))}
+                  </g>
+                ))}
+              </g>
+              {/* 太极图 */}
+              <g className="intro-taiji">
+                <circle cx="100" cy="100" r="46" fill="#0E0B08" stroke="#C9A15A" strokeWidth="1.5" />
+                <path d="M100 54 a23 23 0 0 1 0 46 a23 23 0 0 0 0 46 a46 46 0 0 1 0 -92 Z" fill="#E4C989" />
+                <circle cx="100" cy="77" r="7" fill="#0E0B08" />
+                <circle cx="100" cy="123" r="7" fill="#E4C989" />
+              </g>
+            </svg>
+            <div className="intro-title">富甲天下</div>
+            <div className="intro-sub">AI · 多体系术数问答</div>
+            <div className="intro-hint">轻触太极 · 入局</div>
+          </div>
+        </div>
+      )}
+
       <div className="wrap">
         <RunBar pos="top" />
 
@@ -1982,7 +2064,18 @@ function AppInner() {
           </div>
         </section>
 
-        {/* CHAPTER 02 · 历史记录（本地留存，仅当有记录时显示） */}
+        {/* 学习模式入口 */}
+        <section className="section">
+          <button className="learn-entry" onClick={enterLearnMode}>
+            <div className="learn-entry-l">
+              <div className="learn-kicker">STUDY · 学习模式</div>
+              <div className="learn-title">跟AI老师学术数</div>
+              <div className="learn-sub">八字 · 小六壬 · 奇门 · 梅花 · 六爻 · 塔罗，一对一问答式入门，从零学起</div>
+            </div>
+            <div className="learn-entry-r">开始学习 →</div>
+          </button>
+        </section>
+
         {historyList.length > 0 && (
           <section className="section">
             <div className="sec-head">
@@ -2018,9 +2111,6 @@ function AppInner() {
                       ))
                     )}
                     <div className="btn-row" style={{ marginTop: 14 }}>
-                      {h.messages.length > 0 && (
-                        <button type="button" className="btn" onClick={() => resumeHistory(h)}>继续这局对话 →</button>
-                      )}
                       <button type="button" className="btn ghost" onClick={() => deleteHistoryEntry(h.id)}>删除这条记录</button>
                     </div>
                   </div>
@@ -2034,10 +2124,10 @@ function AppInner() {
 
         {/* 详情页：选中体系后显示返回按钮 */}
         {/* 详情页顶部返回栏 */}
-        {selected && (
+        {(selected || learnMode) && (
           <div className="backbar">
-            <button className="backbtn" disabled={loading} title={loading ? "AI 正在回复，请等它说完再离开" : undefined} onClick={() => resetForm(null)}>← 返回 · 重新择体</button>
-            {phase === "chat" && NEEDS_SETUP[selected] && (
+            <button className="backbtn" disabled={loading} title={loading ? "AI 正在回复，请等它说完再离开" : undefined} onClick={() => (learnMode ? exitLearnMode() : resetForm(null))}>← 返回{learnMode ? " · 退出学习" : " · 重新择体"}</button>
+            {!learnMode && phase === "chat" && NEEDS_SETUP[selected] && (
               <button
                 className="backbtn"
                 style={{ marginLeft: 10 }}
@@ -2055,7 +2145,7 @@ function AppInner() {
                 }}
               >✎ 修改资料</button>
             )}
-            {phase === "chat" && (
+            {!learnMode && phase === "chat" && (
               <button className="backbtn" style={{ marginLeft: 10 }} disabled={loading} title={loading ? "AI 正在回复，请等它说完再重新起局" : undefined} onClick={() => resetForm(selected)}>↻ 重新起局</button>
             )}
           </div>
@@ -2257,15 +2347,15 @@ function AppInner() {
         )}
 
         {/* CHAT · 对话界面 */}
-        {selected && phase === "chat" && (
+        {(selected || learnMode) && phase === "chat" && (
           <section className="section">
             <div className="sec-head">
-              <Kicker code="CHAPTER 02" label={`问卜 · ${LATIN[selected]}`} />
-              <h2>{currentSystem.name} · 有什么想问的</h2>
+              <Kicker code={learnMode ? "STUDY" : "CHAPTER 02"} label={learnMode ? "学习 · LEARN" : `问卜 · ${LATIN[selected]}`} />
+              <h2>{learnMode ? "术数课堂 · 随便问" : `${currentSystem.name} · 有什么想问的`}</h2>
             </div>
 
             {/* 算法排盘（本局盘面，一直展示在对话上方） */}
-            {castInfo && (
+            {!learnMode && castInfo && (
               <div className="castbar" style={{ marginBottom: 18 }}>
                 <div className="cb-head">
                   <Kicker onDark code="CASTING LOG" label="本局排盘" />
@@ -2379,12 +2469,12 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#EAE2D3", color: "#241C12", fontFamily: "system-ui,-apple-system,sans-serif", textAlign: "center" }}>
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#151210", color: "#F3E8D2", fontFamily: "system-ui,-apple-system,sans-serif", textAlign: "center" }}>
           <div style={{ maxWidth: 420 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>☯</div>
             <h2 style={{ fontSize: 18, margin: "0 0 10px" }}>页面出了点小状况</h2>
-            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#6B5440" }}>刷新一下试试。如果反复出现，把下面这行信息发给开发者：</p>
-            <pre style={{ fontSize: 12, background: "#FFFCF7", border: "1px solid #EFE7D8", borderRadius: 8, padding: "10px 12px", marginTop: 12, whiteSpace: "pre-wrap", textAlign: "left", color: "#B0463A" }}>{this.state.msg}</pre>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#A89377" }}>刷新一下试试。如果反复出现，把下面这行信息发给开发者：</p>
+            <pre style={{ fontSize: 12, background: "#211D18", border: "1px solid #3A3226", borderRadius: 8, padding: "10px 12px", marginTop: 12, whiteSpace: "pre-wrap", textAlign: "left", color: "#D9705F" }}>{this.state.msg}</pre>
           </div>
         </div>
       );
@@ -2400,6 +2490,7 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
 
 
 
