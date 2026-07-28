@@ -16,7 +16,18 @@
     />
     <meta name="author" content="富甲天下" />
     <meta name="robots" content="index,follow" />
-    <meta name="theme-color" content="#241C12" />
+    <meta name="theme-color" content="#151210" />
+
+    <!--
+      搜索引擎站点验证：去 Google Search Console / 百度搜索资源平台 添加此站点后，
+      把它们给的验证码填进下面对应的 content，再取消注释即可。
+      <meta name="google-site-verification" content="替换成你的验证码" />
+      <meta name="baidu-site-verification" content="替换成你的验证码" />
+    -->
+
+    <!-- 正式域名（vvvvvv.cn）：canonical + 绝对地址，微信等分享抓取器要求绝对路径 -->
+    <link rel="canonical" href="https://vvvvvv.cn/" />
+    <link rel="manifest" href="/manifest.json" />
 
     <!-- 图标 -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -31,7 +42,8 @@
       content="小六壬·八字·奇门·梅花·六爻·塔罗，六大体系一站问卜。算法精确起局，AI 沉稳解读。"
     />
     <meta property="og:locale" content="zh_CN" />
-    <meta property="og:image" content="/og.png" />
+    <meta property="og:url" content="https://vvvvvv.cn/" />
+    <meta property="og:image" content="https://vvvvvv.cn/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="富甲天下 · AI多体系术数问答" />
@@ -43,16 +55,77 @@
       name="twitter:description"
       content="小六壬·八字·奇门·梅花·六爻·塔罗，六大体系一站问卜。算法精确起局，AI 沉稳解读。"
     />
-    <meta name="twitter:image" content="/og.png" />
+    <meta name="twitter:image" content="https://vvvvvv.cn/og.png" />
 
-    <!--
-      部署后如需最佳兼容性（尤其是微信、部分抓取器要求绝对地址），
-      建议把下面两处以及上方 og:image / twitter:image 换成你的正式域名，例如：
-        <link rel="canonical" href="https://你的域名/" />
-        <meta property="og:url" content="https://你的域名/" />
-        <meta property="og:image" content="https://你的域名/og.png" />
-        <meta name="twitter:image" content="https://你的域名/og.png" />
-    -->
+    <!-- 结构化数据（JSON-LD），帮助 Google / 百度理解站点性质 -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "富甲天下",
+        "alternateName": "富甲天下 · AI多体系术数问答",
+        "url": "https://vvvvvv.cn/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "zh-CN",
+        "description": "融合小六壬、八字、奇门遁甲、梅花易数、六爻、塔罗六大体系的 AI 术数问答工具。起局、排盘、成卦由算法精确计算，AI 依传统典籍沉稳解读，仅供参考自省。",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "CNY"
+        }
+      }
+    </script>
+
+    <!-- FAQ 结构化数据：符合事实的问答，帮助获得 Google 搜索结果里的 FAQ 富媒体展示 -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "富甲天下是什么？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "富甲天下是一个融合小六壬、八字、奇门遁甲、梅花易数、六爻、塔罗六大传统术数体系的 AI 问答工具。起局、排盘、成卦由确定性算法在前端精确计算，AI 只依据传统典籍体系作文字解读，因此同一局面复算结果稳定。"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "测算结果准确吗？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "起局与排盘（如八字四柱与大运、六爻卦象与世应、奇门定局等）均由算法精确计算；但 AI 给出的文字解读仅供参考与自省，不构成对投资、医疗、法律等具体决策的建议。"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "测算记录会上传到服务器吗？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "历史记录只保存在你本机浏览器的 localStorage 本地存储里，不会上传到任何服务器；换设备或清除浏览器数据后无法找回，最多保留 100 条。"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "八字不知道具体出生时间怎么办？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "可以勾选「不确定具体出生时间」，网站提供「时辰倒推」向导，通过外貌、睡姿、性格等特征初筛候选时辰、再对比大运，辅助缩小范围，但结果仅供参考，不保证精确。"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "小六壬需要提供什么信息才能起课？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "小六壬支持「时间起课」（按当下中国时间自动换算农历月、日、时辰，无需自己填写）和「报数起课」（随口报一个数字代入）两种方式。"
+            }
+          }
+        ]
+      }
+    </script>
 
     <!-- 字体：Noto Serif SC（衬线标题/卦名）· Noto Sans SC（正文）· Space Mono（数据/标签） -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -65,7 +138,7 @@
     <style>
       html, body {
         margin: 0;
-        background: #EAE2D3;
+        background: #151210;
         overflow-x: hidden;
         width: 100%;
         max-width: 100%;
@@ -77,6 +150,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      noscript 兜底：本站是纯前端渲染的单页应用，不执行 JS 的抓取器（部分百度等爬虫对 SPA 支持较弱）
+      默认只能看到一个空的 #root，这里给一段真实、非堆砌关键词的说明文字，保证至少有实质内容可收录。
+    -->
+    <noscript>
+      <div style="max-width:640px;margin:60px auto;padding:0 24px;font-family:-apple-system,sans-serif;line-height:1.8;color:#3A352E">
+        <h1>富甲天下 · AI 多体系术数问答</h1>
+        <p>富甲天下融合小六壬、八字、奇门遁甲、梅花易数、六爻、塔罗六大传统术数体系。起局、排盘、成卦由确定性算法在前端精确计算（如八字四柱与大运、六爻卦象与世应、奇门定局与值符值使等），再由 AI 依据传统典籍体系给出文字解读，同一局面复算结果稳定。</p>
+        <h2>六大体系</h2>
+        <ul>
+          <li>小六壬——掐指速断，长于眼前小事、失物、行人等即时之问。</li>
+          <li>八字——命理推演，观五行旺衰、十神格局与大运流年，宜问性情、事业、婚姻等长线之事。</li>
+          <li>奇门遁甲——时空布局，以三奇六仪、八门九星推演，长于择时、谋事、方位。</li>
+          <li>梅花易数——数理起卦，观体用生克比和，宜问事之成败趋向。</li>
+          <li>六爻——摇钱成卦，据动爻与用神旺衰断吉凶，几乎可问诸事。</li>
+          <li>塔罗——抽牌问心，宜问处境、抉择与内在动因。</li>
+        </ul>
+        <p>本站需要浏览器启用 JavaScript 才能正常使用。术数推演仅供参考与自省，不构成对具体决策（含投资、医疗、法律等）的建议。</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
