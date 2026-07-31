@@ -1157,7 +1157,7 @@ const DESIGN_CSS = `
 .kicker{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-txt)}
 .kicker .bar{width:34px;height:2px;background:var(--gold);flex:0 0 auto}
 .kicker.on-dark{color:var(--gold-lt)} .kicker.on-dark .bar{background:var(--gold-lt)}
-.hero{background:var(--coffee);color:var(--cream);border-radius:10px;margin-top:20px;padding:46px 46px 40px;position:relative;overflow:hidden;box-shadow:0 20px 60px -34px rgba(21,17,11,.7)}
+.hero{background:var(--coffee);color:var(--cream);border-radius:10px;margin-top:64px;padding:46px 46px 40px;position:relative;overflow:hidden;box-shadow:0 20px 60px -34px rgba(21,17,11,.7)}
 .hero-grid{display:grid;grid-template-columns:1fr 300px;gap:40px;align-items:center}
 .hero h1{font-family:var(--serif);font-weight:900;color:#FBF3E2;font-size:clamp(44px,6.6vw,72px);line-height:1.05;letter-spacing:.14em;margin:18px 0 12px}
 .hero-sub{font-family:var(--sans);font-weight:300;font-size:15px;color:var(--cream-dim);max-width:460px;line-height:1.85;margin:0}
@@ -1181,7 +1181,7 @@ const DESIGN_CSS = `
 .sys .ds{font-size:12px;color:var(--ink-sub);margin-top:10px;line-height:1.7;flex:1}
 .sys .pick{margin-top:12px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mono-label)}
 .sys.sel{background:var(--coffee)}
-.backbar{padding:24px 0 0}
+.backbar{padding:24px 0 0 60px}
 .backbtn{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-sub);cursor:pointer;transition:background .18s}
 .backbtn:hover{background:var(--card3);color:var(--ink)}
 .backbtn:disabled{opacity:.45;cursor:not-allowed}
@@ -1341,6 +1341,29 @@ const DESIGN_CSS = `
 .learn-sub{font-size:12.5px;color:var(--ink-sub);line-height:1.6}
 .learn-entry-r{flex:0 0 auto;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--gold);white-space:nowrap}
 @media(max-width:520px){.learn-entry{flex-direction:column;align-items:flex-start;gap:12px}}
+.sys.sys-learn{background:linear-gradient(135deg,rgba(201,161,90,.12),rgba(28,23,18,0))}
+.sys.sys-learn .sym{color:var(--gold-lt)}
+.hist-toggle{position:fixed;top:16px;left:16px;z-index:60;width:44px;height:44px;border-radius:11px;background:rgba(33,29,24,.92);border:1px solid var(--gold-lt2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 4px 18px rgba(0,0,0,.35);backdrop-filter:blur(4px)}
+.hist-toggle span{display:block;width:18px;height:2px;background:var(--gold-lt);border-radius:2px}
+.drawer-mask{position:fixed;inset:0;z-index:70;background:rgba(8,6,4,.6);animation:introFade .2s ease-out}
+.drawer{position:fixed;top:0;left:0;bottom:0;z-index:71;width:82%;max-width:340px;background:#171310;border-right:1px solid var(--gold-lt2);display:flex;flex-direction:column;box-shadow:8px 0 40px rgba(0,0,0,.5);animation:drawerIn .24s ease-out}
+@keyframes drawerIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 6px;font-family:var(--serif);font-size:17px;color:var(--gold-lt)}
+.drawer-x{background:none;border:0;color:var(--ink-sub);font-size:16px;cursor:pointer;padding:4px 6px}
+.drawer-sub{padding:0 18px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ink-sub);border-bottom:1px solid var(--line2)}
+.drawer-empty{padding:30px 20px;color:var(--ink-sub);font-size:13px;line-height:1.7}
+.drawer-list{flex:1;overflow-y:auto;padding:10px 12px}
+.drawer-item{display:flex;align-items:stretch;gap:6px;margin-bottom:8px}
+.drawer-item-main{flex:1;min-width:0;text-align:left;background:rgba(42,37,30,.6);border:1px solid var(--line2);border-radius:9px;padding:10px 12px;cursor:pointer;transition:border-color .15s}
+.drawer-item-main:hover{border-color:var(--gold-lt2)}
+.drawer-item.cur .drawer-item-main{border-color:var(--gold);background:rgba(201,161,90,.1)}
+.drawer-item-sys{font-family:var(--mono);font-size:10px;color:var(--gold-txt);letter-spacing:.06em;margin-bottom:3px}
+.drawer-item-sum{font-size:13px;color:var(--ink2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drawer-item-time{font-size:10px;color:var(--ink-sub);margin-top:4px}
+.drawer-item-del{flex:0 0 auto;width:30px;background:none;border:1px solid var(--line2);border-radius:9px;color:var(--ink-sub);font-size:12px;cursor:pointer}
+.drawer-item-del:hover{color:var(--verm);border-color:var(--verm)}
+.drawer-clear{margin:8px 14px 18px;padding:10px;background:none;border:1px solid var(--line2);border-radius:9px;color:var(--ink-sub);font-size:12px;cursor:pointer}
+.drawer-clear:hover{color:var(--verm);border-color:var(--verm)}
 .lr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}
 .lr-cell{background:rgba(42,37,30,.7);border:1px solid var(--line2);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;color:var(--ink3)}
 .lr-cell.self{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
@@ -1619,6 +1642,7 @@ function AppInner() {
 
   // 历史记录（本地存储）
   const [historyList, setHistoryList] = useState(loadHistory);
+  const [showHistory, setShowHistory] = useState(false); // 左侧历史抽屉
   const currentHistoryRef = useRef(null); // 当前这一局对应的历史记录条目（不含最新messages，发消息时再补上）
 
   function upsertHistory(entry) {
@@ -2254,6 +2278,45 @@ function AppInner() {
       )}
 
       <div className="wrap">
+        {/* 左上角 ☰ —— 打开历史记录抽屉 */}
+        {entered && (
+          <button className="hist-toggle" onClick={() => setShowHistory(true)} aria-label="历史记录">
+            <span></span><span></span><span></span>
+          </button>
+        )}
+
+        {/* 左侧历史抽屉 */}
+        {showHistory && (
+          <>
+            <div className="drawer-mask" onClick={() => setShowHistory(false)} />
+            <aside className="drawer">
+              <div className="drawer-head">
+                <span>历史记录</span>
+                <button className="drawer-x" onClick={() => setShowHistory(false)} aria-label="关闭">✕</button>
+              </div>
+              <div className="drawer-sub">仅存本机 · 最多 {HISTORY_LIMIT} 条</div>
+              {historyList.length === 0 ? (
+                <div className="drawer-empty">还没有记录。起局问卜或进课堂学习后，会自动存在这里。</div>
+              ) : (
+                <div className="drawer-list">
+                  {historyList.map((h) => (
+                    <div className={"drawer-item" + (currentHistoryRef.current && currentHistoryRef.current.id === h.id ? " cur" : "")} key={h.id}>
+                      <button className="drawer-item-main" onClick={() => { resumeHistory(h); setShowHistory(false); }}>
+                        <div className="drawer-item-sys">{h.systemName}</div>
+                        <div className="drawer-item-sum">{h.castSummary}</div>
+                        <div className="drawer-item-time">{fmtHistoryTime(h.updatedAt)} · {h.messages.length} 条</div>
+                      </button>
+                      <button className="drawer-item-del" onClick={() => deleteHistoryEntry(h.id)} aria-label="删除">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {historyList.length > 0 && (
+                <button className="drawer-clear" onClick={() => { if (window.confirm("确定清空全部历史记录吗？不可恢复。")) { clearAllHistory(); } }}>清空全部</button>
+              )}
+            </aside>
+          </>
+        )}
         <RunBar pos="top" />
 
         {/* 首页：未选体系时显示 HERO + 列表 */}
@@ -2280,18 +2343,6 @@ function AppInner() {
           </div>
         </header>
 
-        {/* 术数课堂入口（置顶） */}
-        <section className="section">
-          <button className="learn-entry" onClick={enterLearnMode}>
-            <div className="learn-entry-l">
-              <div className="learn-kicker">STUDY · 术数课堂</div>
-              <div className="learn-title">跟AI老师学术数</div>
-              <div className="learn-sub">八字 · 小六壬 · 奇门 · 梅花 · 六爻 · 塔罗，一对一问答式入门，从零学起</div>
-            </div>
-            <div className="learn-entry-r">进入课堂 →</div>
-          </button>
-        </section>
-
         {/* CHAPTER 01 · 择体系 */}
         <section className="section">
           <div className="sec-head">
@@ -2311,55 +2362,16 @@ function AppInner() {
                 </button>
               );
             })}
+            <button className="sys sys-learn" onClick={enterLearnMode}>
+              <div className="no">07</div>
+              <div className="sym">☰</div>
+              <div className="nm">术数课堂</div>
+              <div className="st">STUDY · 跟AI学</div>
+              <div className="pick">进入课堂 →</div>
+            </button>
           </div>
         </section>
 
-        {historyList.length > 0 && (
-          <section className="section">
-            <div className="sec-head">
-              <Kicker code="ARCHIVE" label="历史记录 · 本地留存" />
-              <h2>历史记录</h2>
-              <p className="lead">仅保存在这台设备的浏览器里，不会上传到任何服务器；最多保留 {HISTORY_LIMIT} 条，点开可看完整问答。</p>
-            </div>
-            <div className="btn-row" style={{ marginBottom: 16, justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => { if (window.confirm("确定要清空全部历史记录吗？此操作不可恢复。")) clearAllHistory(); }}
-              >
-                清空全部历史
-              </button>
-            </div>
-            <div className="history-list">
-              {historyList.map((h) => (
-                <details className="acc history-item" key={h.id}>
-                  <summary>
-                    <span>{h.systemName} · {h.castSummary}</span>
-                    <span className="hint">{fmtHistoryTime(h.updatedAt)}</span>
-                  </summary>
-                  <div className="acc-body">
-                    {h.messages.length === 0 ? (
-                      <p>（这一局还没有开始提问）</p>
-                    ) : (
-                      h.messages.map((m, i) => (
-                        <div className="hist-msg" key={i}>
-                          <div className={"hist-role" + (m.role === "assistant" ? " bot" : "")}>{m.role === "assistant" ? "AI 解读" : "你问"}</div>
-                          <div className="hist-content">{m.content}</div>
-                        </div>
-                      ))
-                    )}
-                    <div className="btn-row" style={{ marginTop: 14 }}>
-                      {h.messages.length > 0 && (
-                        <button type="button" className="btn" onClick={() => resumeHistory(h)}>继续这局对话 →</button>
-                      )}
-                      <button type="button" className="btn ghost" onClick={() => deleteHistoryEntry(h.id)}>删除这条记录</button>
-                    </div>
-                  </div>
-                </details>
-              ))}
-            </div>
-          </section>
-        )}
         </>
         )}
 
