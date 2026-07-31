@@ -1069,7 +1069,13 @@ function buildCastContext(systemId, extra) {
         `【本局背景·八字】已排定四柱：年柱${p.year}　月柱${p.month}　日柱${p.day}　${hourLine}。纳音：年${r.naYin.year}、月${r.naYin.month}、日${r.naYin.day}${r.naYin.hour ? `、时${r.naYin.hour}` : ""}。\n` +
         `${dayunLines}\n` +
         `全程基于这些数据（日主五行、格局、十神、大运流年）来聊，不要改动干支、不要重新排盘。${placeLine}${nowLine}\n` +
-        `断法参酌 ${BAZI_CLASSICS.slice(0, 5).join("、")} 等传统命理体系。`
+        `断法参酌 ${BAZI_CLASSICS.slice(0, 5).join("、")} 等传统命理体系。\n\n` +
+        `【八字解读流程——你的第一条回复必须严格按这四步走，用清晰的小标题分段】\n` +
+        `第一步「核验往事」：根据这个八字的大运流年，推算此人过去可能真实发生过的事，列出恰好 10 条，按人生阶段分组（童年0-12岁、少年13-18岁、青年19-30岁、成年31岁至今，各阶段分配若干条，合计10条）。每条尽量具体可核对（哪个年龄段前后、什么方面，如学业变动、健康、搬迁、家庭变故、感情起伏、财运升降、事业转折等），用「大约X岁前后……」的口吻。这一步是让求测者核对准不准，以此验证命盘可信度。\n` +
+        `第二步「过去脉络」：10条之后，用两三句话总结此人过去整体运势走向（哪几段顺、哪几段坎坷），点出关键转折大运。\n` +
+        `第三步「八字报告」：给一份简明命盘解读——日主强弱与喜用、性格特质、五行格局、事业财运感情婚姻的大致倾向、当前大运流年的影响。大白话，术语随讲随解释。\n` +
+        `第四步「问所求」：最后主动问——「以上过去的推算，你对照一下准不准？你现在最想深入看哪方面（事业/财运/感情婚姻/健康/某个具体决定等）？我再针对性帮你细看。」\n` +
+        `注意：第一条回复就把这四步一次性给全（这是八字解读固定开场）。语气亲切自然，像有经验的老师在看盘。之后多轮再围绕追问深入。`
       );
     }
     case "qimen":
@@ -1188,6 +1194,9 @@ const DESIGN_CSS = `
 .backbtn:disabled:hover{background:var(--card)}
 .chat{display:flex;flex-direction:column;gap:14px;margin:6px 0 16px;min-height:120px}
 .chat-hint{background:var(--card);border:1px dashed var(--line2);border-radius:10px;padding:16px 18px;color:var(--ink-sub);font-size:14px;line-height:1.7}
+.bazi-start-btn{background:var(--gold);color:#1A1510;border:0;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .18s}
+.bazi-start-btn:hover{opacity:.9}
+.bazi-start-btn:disabled{opacity:.4;cursor:default}
 .bubble{max-width:86%;display:flex;flex-direction:column}
 .bubble.me{align-self:flex-end;align-items:flex-end}
 .bubble.bot{align-self:flex-start;align-items:flex-start}
@@ -1343,8 +1352,24 @@ const DESIGN_CSS = `
 @media(max-width:520px){.learn-entry{flex-direction:column;align-items:flex-start;gap:12px}}
 .sys.sys-learn{background:linear-gradient(135deg,rgba(201,161,90,.12),rgba(28,23,18,0))}
 .sys.sys-learn .sym{color:var(--gold-lt)}
-.hist-toggle{position:fixed;top:16px;left:16px;z-index:60;width:44px;height:44px;border-radius:11px;background:rgba(33,29,24,.92);border:1px solid var(--gold-lt2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 4px 18px rgba(0,0,0,.35);backdrop-filter:blur(4px)}
-.hist-toggle span{display:block;width:18px;height:2px;background:var(--gold-lt);border-radius:2px}
+.learn-row{width:100%;display:flex;align-items:center;gap:18px;text-align:left;background:linear-gradient(120deg,#241C10 0%,#1A1611 60%,#15120E 100%);border:1px solid var(--gold-lt2);border-radius:14px;padding:20px 24px;cursor:pointer;transition:border-color .2s,box-shadow .2s;position:relative;overflow:hidden}
+.learn-row::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(201,161,90,.14),transparent 70%);pointer-events:none}
+.learn-row:hover{border-color:var(--gold-lt);box-shadow:0 8px 30px -18px rgba(201,161,90,.5)}
+.learn-row-glyph{flex:0 0 auto;width:54px;height:54px;border-radius:12px;border:1px solid var(--gold-lt2);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:28px;color:var(--gold-lt);background:rgba(201,161,90,.08)}
+.learn-row-body{flex:1;min-width:0}
+.learn-row-title{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--gold-lt);letter-spacing:.04em;margin-bottom:5px}
+.learn-row-sub{font-size:13px;color:var(--ink-sub);line-height:1.6}
+.learn-row-go{flex:0 0 auto;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--gold);white-space:nowrap}
+@media(max-width:520px){.learn-row{gap:14px;padding:18px}.learn-row-go{display:none}.learn-row-glyph{width:46px;height:46px;font-size:24px}}
+/* 历史抽屉触发按钮：精致金边圆钮 */
+.hist-toggle{position:fixed;top:18px;left:18px;z-index:60;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#2A2318,#171310);border:1px solid var(--gold-lt2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.5px;box-shadow:0 6px 20px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,161,90,.15);transition:transform .15s,border-color .2s}
+.hist-toggle:hover{transform:scale(1.06);border-color:var(--gold-lt)}
+.hist-toggle:active{transform:scale(.96)}
+.hist-toggle span{display:block;height:1.5px;background:var(--gold-lt);border-radius:2px;transition:width .2s}
+.hist-toggle span:nth-child(1){width:16px}
+.hist-toggle span:nth-child(2){width:11px}
+.hist-toggle span:nth-child(3){width:16px}
+.hist-toggle:hover span:nth-child(2){width:16px}
 .drawer-mask{position:fixed;inset:0;z-index:70;background:rgba(8,6,4,.6);animation:introFade .2s ease-out}
 .drawer{position:fixed;top:0;left:0;bottom:0;z-index:71;width:82%;max-width:340px;background:#171310;border-right:1px solid var(--gold-lt2);display:flex;flex-direction:column;box-shadow:8px 0 40px rgba(0,0,0,.5);animation:drawerIn .24s ease-out}
 @keyframes drawerIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
@@ -1951,8 +1976,8 @@ function AppInner() {
   }
 
   // 发送一条对话消息
-  async function sendMessage() {
-    const text = input.trim();
+  async function sendMessage(overrideText) {
+    const text = (typeof overrideText === "string" ? overrideText : input).trim();
     if ((!text && !pendingImage) || loading) return;
     setError("");
     setInput("");
@@ -2362,14 +2387,22 @@ function AppInner() {
                 </button>
               );
             })}
-            <button className="sys sys-learn" onClick={enterLearnMode}>
-              <div className="no">07</div>
-              <div className="sym">☰</div>
-              <div className="nm">术数课堂</div>
-              <div className="st">STUDY · 跟AI学</div>
-              <div className="pick">进入课堂 →</div>
-            </button>
           </div>
+        </section>
+
+        {/* 术数课堂 · 单独一栏 */}
+        <section className="section">
+          <div className="sec-head">
+            <Kicker code="CHAPTER 02" label="研习 · 术数课堂" />
+          </div>
+          <button className="learn-row" onClick={enterLearnMode}>
+            <div className="learn-row-glyph">學</div>
+            <div className="learn-row-body">
+              <div className="learn-row-title">术数课堂</div>
+              <div className="learn-row-sub">跟 AI 老师一对一学八字、小六壬、奇门、梅花、六爻、塔罗，从零入门</div>
+            </div>
+            <div className="learn-row-go">进入课堂 →</div>
+          </button>
         </section>
 
         </>
@@ -2624,7 +2657,13 @@ function AppInner() {
                 <div className="chat-hint">
                   {selected === "qimen" && "直接把想问的事说出来——你问的这一刻，会按当下的时间起盘，然后据此为你解读。"}
                   {selected === "liuyao" && "六爻讲究「不问不卜」，先把想问的具体事情说出来——一提交就会摇钱起卦，据卦而断。"}
-                  {selected !== "qimen" && selected !== "liuyao" && "局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。"}
+                  {selected === "bazi" && (
+                    <div>
+                      <div style={{ marginBottom: 12 }}>盘已排好。点下面开始——我会先根据你的八字推算过去发生过的事（10条，供你核对准不准），再给出命盘报告，最后问你想深入看哪方面。</div>
+                      <button className="bazi-start-btn" disabled={loading} onClick={() => sendMessage("请开始：先核验往事10条（按人生阶段分），再总结过去脉络，再给八字报告，最后问我最想深入看哪方面。")}>开始核验解读 →</button>
+                    </div>
+                  )}
+                  {selected !== "qimen" && selected !== "liuyao" && selected !== "bazi" && "局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。"}
                 </div>
               )}
               {messages.map((m, i) => (
@@ -2743,5 +2782,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
 
