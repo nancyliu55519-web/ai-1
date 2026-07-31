@@ -1070,12 +1070,15 @@ function buildCastContext(systemId, extra) {
         `${dayunLines}\n` +
         `全程基于这些数据（日主五行、格局、十神、大运流年）来聊，不要改动干支、不要重新排盘。${placeLine}${nowLine}\n` +
         `断法参酌 ${BAZI_CLASSICS.slice(0, 5).join("、")} 等传统命理体系。\n\n` +
-        `【八字解读流程——你的第一条回复必须严格按这四步走，用清晰的小标题分段】\n` +
-        `第一步「核验往事」：根据这个八字的大运流年，推算此人过去可能真实发生过的事，列出恰好 10 条，按人生阶段分组（童年0-12岁、少年13-18岁、青年19-30岁、成年31岁至今，各阶段分配若干条，合计10条）。每条尽量具体可核对（哪个年龄段前后、什么方面，如学业变动、健康、搬迁、家庭变故、感情起伏、财运升降、事业转折等），用「大约X岁前后……」的口吻。这一步是让求测者核对准不准，以此验证命盘可信度。\n` +
-        `第二步「过去脉络」：10条之后，用两三句话总结此人过去整体运势走向（哪几段顺、哪几段坎坷），点出关键转折大运。\n` +
-        `第三步「八字报告」：给一份简明命盘解读——日主强弱与喜用、性格特质、五行格局、事业财运感情婚姻的大致倾向、当前大运流年的影响。大白话，术语随讲随解释。\n` +
-        `第四步「问所求」：最后主动问——「以上过去的推算，你对照一下准不准？你现在最想深入看哪方面（事业/财运/感情婚姻/健康/某个具体决定等）？我再针对性帮你细看。」\n` +
-        `注意：第一条回复就把这四步一次性给全（这是八字解读固定开场）。语气亲切自然，像有经验的老师在看盘。之后多轮再围绕追问深入。`
+        `【八字解读流程——你的第一条回复必须严格按下面几步走，用清晰的小标题分段，内容要详实、有料，不要简略】\n` +
+        `第一步「核验往事」：根据此八字的大运流年、十神、神煞，推算此人过去真实可能发生过的事，列出恰好 10 条，按人生阶段分组（童年0-12岁、少年13-18岁、青年19-30岁、成年31岁至今，各阶段分配若干条，合计10条）。每条都要写得具体、有画面感、可核对——不只是「学业有波动」，而要像「大约X岁前后，学习上遇到一次明显的挫折或转折，可能是转学、成绩下滑或与老师同学关系紧张」这样有情节、有方向。方面可涉及：学业、健康疾病伤灾、搬家迁移、父母长辈家庭变故、感情起伏分合、财运升降、事业工作转折、贵人小人等。\n` +
+        `第一步结束后，必须停下来明确对求测者说：「以上这 10 条，你对照一下自己的经历，准不准？如果有明显不对的地方，请一定及时告诉我（哪条不符、实际是什么情况），我会据此校准，再往下给你完整的八字报告。」——然后就停在这里等用户回应，先不要急着往下给报告。\n` +
+        `（等用户确认或反馈后，再继续下面几步）\n` +
+        `第二步「过去脉络」：结合用户的反馈，用几句话总结此人过去整体运势走向、点出关键转折大运。\n` +
+        `第三步「详细八字报告」：这是重点，要写得充实专业，至少包含——（1）日主强弱旺衰、判断喜用神和忌神，讲清楚为什么；（2）明确点出命格格局，用专业术语并解释，比如「伤官见官」「财官双美」「食神制杀」「印重身旺」「从财格」等，说清这个格局对人生意味着什么；（3）性格禀性特质；（4）事业、财运、婚姻感情、健康各方面的详细倾向；（5）当前所走大运流年的具体影响。\n` +
+        `第四步「开运调理」：根据喜用神，给出实用的开运建议——喜用什么五行、对应适合穿什么颜色的衣服、日常适合佩戴什么材质/颜色的饰品配件、有利的方位方向、可留意的行业或生活习惯等，讲得具体可操作。\n` +
+        `第五步「问所求」：最后主动问——「你现在最想深入看哪方面（事业/财运/感情婚姻/健康/某个具体决定等）？我再针对性帮你细看。」\n` +
+        `整体要求：这是一份有价值、值得付费的专业解读，务必详实、有深度、有具体命格术语和可操作建议，不要泛泛而谈、不要简短敷衍。语气亲切自然，像有经验的老师在给人看盘，术语随讲随用大白话解释。`
       );
     }
     case "qimen":
@@ -1770,6 +1773,7 @@ function AppInner() {
   function resetForm(id) {
     if (loading) return; // AI 正在回复时不允许切走，避免旧请求返回后把回复错接到新的一局上
     abandonEmptyHistoryEntry();
+    setLearnMode(false); // 学习模式仅限术数课堂：一旦选体系就退出学习
     setSelected(id);
     setNumbers("");
     setTarotSpread("overall");
@@ -1934,6 +1938,10 @@ function AppInner() {
   function handleSetupSubmit() {
     if (selected === "bazi" && (!baziYear || !baziMonth || !baziDay)) {
       setError("先把出生年、月、日填完整哈");
+      return;
+    }
+    if (selected === "bazi" && baziGender !== "male" && baziGender !== "female") {
+      setError("请先选择性别（男/女）——大运顺逆排要用");
       return;
     }
     if (selected === "bazi" && !baziHourUnknown && baziHour === "") {
@@ -2344,8 +2352,8 @@ function AppInner() {
         )}
         <RunBar pos="top" />
 
-        {/* 首页：未选体系时显示 HERO + 列表 */}
-        {!selected && (
+        {/* 首页：未选体系、非学习模式时显示 HERO + 列表 */}
+        {!selected && !learnMode && (
         <>
         {/* HERO */}
         <header className="hero">
@@ -2514,8 +2522,7 @@ function AppInner() {
                             {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{h}时</option>)}
                           </select>
                           <select className="selbox" disabled={baziHourUnknown} value={baziMinute} onChange={(e) => setBaziMinute(e.target.value)}>
-                            <option value="0">0分</option>
-                            {Array.from({ length: 11 }, (_, i) => (i + 1) * 5).map((m) => <option key={m} value={m}>{m}分</option>)}
+                            {Array.from({ length: 60 }, (_, m) => <option key={m} value={m}>{m}分</option>)}
                           </select>
                         </div>
                         <label className="checkline" style={{ marginBottom: 10 }}>
@@ -2554,9 +2561,8 @@ function AppInner() {
                         <div className="spread c3" style={{ marginBottom: 14 }}>
                           <button type="button" className={baziGender === "male" ? "on" : ""} onClick={() => setBaziGender("male")}>男</button>
                           <button type="button" className={baziGender === "female" ? "on" : ""} onClick={() => setBaziGender("female")}>女</button>
-                          <button type="button" className={baziGender === "" ? "on" : ""} onClick={() => setBaziGender("")}>未知</button>
                         </div>
-                        {baziGender === "" && <Callout tone="jade" label="性别未填">大运顺排、逆排取决于性别，未填时会同时列出男命、女命两种排法供参考。</Callout>}
+                        {baziGender === "" && <Callout tone="jade" label="请选性别">大运顺排、逆排取决于性别，请先选择男或女。</Callout>}
 
                         <label className="flabel" style={{ marginTop: 14 }}>出生地（选填）</label>
                         <input className="fin" style={{ marginBottom: 12 }} type="text" value={baziBirthPlace} onChange={(e) => setBaziBirthPlace(e.target.value)} placeholder="如：广东广州" />
@@ -2660,7 +2666,7 @@ function AppInner() {
                   {selected === "bazi" && (
                     <div>
                       <div style={{ marginBottom: 12 }}>盘已排好。点下面开始——我会先根据你的八字推算过去发生过的事（10条，供你核对准不准），再给出命盘报告，最后问你想深入看哪方面。</div>
-                      <button className="bazi-start-btn" disabled={loading} onClick={() => sendMessage("请开始：先核验往事10条（按人生阶段分），再总结过去脉络，再给八字报告，最后问我最想深入看哪方面。")}>开始核验解读 →</button>
+                      <button className="bazi-start-btn" disabled={loading} onClick={() => sendMessage("请开始核验往事：根据我的八字，详细推算过去发生过的10件事（按人生阶段分、写具体），完了先停下来让我核对，有不对的我会告诉你，再给我完整的八字报告。")}>开始核验解读 →</button>
                     </div>
                   )}
                   {selected !== "qimen" && selected !== "liuyao" && selected !== "bazi" && "局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。"}
@@ -2712,7 +2718,7 @@ function AppInner() {
 
 
         {/* APPENDIX · 关于本站（仅首页显示） */}
-        {!selected && (
+        {!selected && !learnMode && (
         <section className="section">
           <div className="sec-head"><Kicker code="APPENDIX" label="关于本站 · 使用说明" /></div>
           <details className="acc">
@@ -2782,4 +2788,5 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
 
