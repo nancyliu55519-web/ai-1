@@ -26,12 +26,12 @@ function getChinaLunarNow() {
 /* ---------------- 数据配置 ---------------- */
 
 const SYSTEMS = [
-  { id: "liuren", name: "小六壬", sub: "掐指速断", glyph: "六" },
-  { id: "bazi", name: "八字", sub: "命理推演", glyph: "命" },
-  { id: "qimen", name: "奇门遁甲", sub: "时空布局", glyph: "奇" },
-  { id: "meihua", name: "梅花易数", sub: "数理起卦", glyph: "梅" },
-  { id: "liuyao", name: "六爻", sub: "摇钱成卦", glyph: "爻" },
-  { id: "tarot", name: "塔罗", sub: "抽牌问心", glyph: "塔" },
+  { id: "liuren", name: "小六壬", glyph: "六", pos: "即时短事 · 掐指速断", use: "寻物、出行、今日办事成败" },
+  { id: "bazi", name: "八字", glyph: "命", pos: "长远大局 · 人生说明书", use: "性格、行业选择、婚恋、发财时机" },
+  { id: "qimen", name: "奇门遁甲", glyph: "奇", pos: "时空布局 · 高阶运筹", use: "商业投资、谈判抉择、突围破局" },
+  { id: "meihua", name: "梅花易数", glyph: "梅", pos: "触物起卦 · 随机灵感", use: "近期运势、即时心念、万事皆可占" },
+  { id: "liuyao", name: "六爻", glyph: "爻", pos: "一事一测 · 精细剖析", use: "项目前景、感情细节、合作成败" },
+  { id: "tarot", name: "塔罗牌", glyph: "塔", pos: "心理透视 · 意象占卜", use: "对方想法、二选一抉择、未来3-6个月走势" },
 ];
 
 // 各体系简介（选中时展示，帮助用户理解其源流与所长）
@@ -1309,13 +1309,25 @@ const DESIGN_CSS = `
 .wrap{max-width:1120px;margin:0 auto;padding:0 24px 40px}
 .serif{font-family:var(--serif)} .mono{font-family:var(--mono)}
 .runbar{display:flex;justify-content:space-between;align-items:center;gap:12px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mono-label)}
-.runbar.top{border-bottom:1px solid var(--line2);padding:12px 0}
+.runbar.top{border-bottom:1px solid var(--line2);padding:10px 0;position:sticky;top:0;z-index:50;background:var(--canvas)}
+.runbar-l{display:flex;align-items:center;gap:10px}
+.runbar-r{display:flex;align-items:center;gap:12px}
+.rb-menu{flex:0 0 auto;width:30px;height:26px;border-radius:7px;background:rgba(201,161,90,.1);border:1px solid var(--gold-lt2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;transition:border-color .15s}
+.rb-menu:hover{border-color:var(--gold-lt)}
+.rb-menu span{display:block;height:1.5px;background:var(--gold-lt);border-radius:2px}
+.rb-menu span:nth-child(1){width:14px}
+.rb-menu span:nth-child(2){width:9px}
+.rb-menu span:nth-child(3){width:14px}
+.rb-font{display:inline-flex;gap:1px;background:rgba(201,161,90,.08);border:1px solid var(--gold-lt2);border-radius:7px;padding:2px}
+.rb-font button{background:none;border:0;color:var(--ink-sub);font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:5px;cursor:pointer;line-height:1;letter-spacing:0}
+.rb-font button:hover{color:var(--gold-lt)}
+.rb-font button.on{background:var(--gold);color:#1A1510;font-weight:700}
 .runbar.bot{border-top:1px solid var(--line2);padding:14px 0;margin-top:40px}
 .runbar .r{text-align:right}
 .kicker{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-txt)}
 .kicker .bar{width:34px;height:2px;background:var(--gold);flex:0 0 auto}
 .kicker.on-dark{color:var(--gold-lt)} .kicker.on-dark .bar{background:var(--gold-lt)}
-.hero{background:var(--coffee);color:var(--cream);border-radius:10px;margin-top:64px;padding:46px 46px 40px;position:relative;overflow:hidden;box-shadow:0 20px 60px -34px rgba(21,17,11,.7)}
+.hero{background:var(--coffee);color:var(--cream);border-radius:10px;margin-top:20px;padding:46px 46px 40px;position:relative;overflow:hidden;box-shadow:0 20px 60px -34px rgba(21,17,11,.7)}
 .hero-grid{display:grid;grid-template-columns:1fr 300px;gap:40px;align-items:center}
 .hero h1{font-family:var(--serif);font-weight:900;color:#FBF3E2;font-size:clamp(44px,6.6vw,72px);line-height:1.05;letter-spacing:.14em;margin:18px 0 12px}
 .hero-sub{font-family:var(--sans);font-weight:300;font-size:15px;color:var(--cream-dim);max-width:460px;line-height:1.85;margin:0}
@@ -1334,12 +1346,13 @@ const DESIGN_CSS = `
 .sys:hover{background:var(--card3)}
 .sys .no{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--mono-label)}
 .sys .sym{position:absolute;top:16px;right:20px;font-family:var(--serif);font-weight:900;font-size:34px;color:var(--gold-lt);opacity:.55;line-height:1}
-.sys .nm{font-family:var(--serif);font-weight:700;font-size:19px;color:var(--ink);margin:14px 0 3px}
-.sys .st{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-txt)}
-.sys .ds{font-size:12px;color:var(--ink-sub);margin-top:10px;line-height:1.7;flex:1}
+.sys .nm{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--ink);margin:14px 0 8px}
+.sys .st{font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:5px}
+.sys .ds{font-size:13px;color:var(--ink-sub);line-height:1.6;flex:1}
+.sys .st b,.sys .ds b{display:inline-block;font-weight:600;font-size:11px;color:var(--gold-lt);background:rgba(201,161,90,.12);border-radius:4px;padding:1px 6px;margin-right:6px;vertical-align:1px}
 .sys .pick{margin-top:12px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mono-label)}
 .sys.sel{background:var(--coffee)}
-.backbar{padding:24px 0 0 60px}
+.backbar{padding:24px 0 0}
 .backbtn{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-sub);cursor:pointer;transition:background .18s}
 .backbtn:hover{background:var(--card3);color:var(--ink)}
 .backbtn:disabled{opacity:.45;cursor:not-allowed}
@@ -1598,11 +1611,32 @@ function Kicker({ code, label, onDark }) {
   );
 }
 
-function RunBar({ pos }) {
+function RunBar({ pos, onHistory, fontScale, setFontScale }) {
+  if (pos === "top") {
+    return (
+      <div className="runbar top">
+        <span className="runbar-l">
+          <button className="rb-menu" onClick={onHistory} aria-label="历史记录">
+            <span></span><span></span><span></span>
+          </button>
+          富甲天下 · AI 多体系术数问答
+        </span>
+        <span className="r runbar-r">
+          WB-2026 · 六体 · {YEAR_GZ}年
+          <span className="rb-font" aria-label="字体大小">
+            <button className={fontScale <= 0.9 ? "on" : ""} onClick={() => setFontScale(0.9)}>小</button>
+            <button className={fontScale === 1 ? "on" : ""} onClick={() => setFontScale(1)}>中</button>
+            <button className={fontScale === 1.2 ? "on" : ""} onClick={() => setFontScale(1.2)}>大</button>
+            <button className={fontScale >= 1.45 ? "on" : ""} onClick={() => setFontScale(1.45)}>特大</button>
+          </span>
+        </span>
+      </div>
+    );
+  }
   return (
     <div className={"runbar " + pos}>
       <span>富甲天下 · AI 多体系术数问答</span>
-      <span className="r">{pos === "top" ? `WB-2026 · 六体 · ${YEAR_GZ}年` : "算法起局 · AI 解读 · 仅供参考"}</span>
+      <span className="r">算法起局 · AI 解读 · 仅供参考</span>
     </div>
   );
 }
@@ -2475,22 +2509,6 @@ function AppInner() {
         </div>
       )}
 
-      {/* 左上角 ☰ 历史 —— 钉死在左上角，不随内容缩放 */}
-      {entered && (
-        <button className="hist-toggle" onClick={() => setShowHistory(true)} aria-label="历史记录">
-          <span></span><span></span><span></span>
-        </button>
-      )}
-      {/* 右上角 字体大小 —— 钉死在右上角 */}
-      {entered && (
-        <div className="font-ctrl" aria-label="字体大小">
-          <button className={fontScale <= 0.9 ? "on" : ""} onClick={() => setFontScale(0.9)}>小</button>
-          <button className={fontScale === 1 ? "on" : ""} onClick={() => setFontScale(1)}>中</button>
-          <button className={fontScale === 1.2 ? "on" : ""} onClick={() => setFontScale(1.2)}>大</button>
-          <button className={fontScale >= 1.45 ? "on" : ""} onClick={() => setFontScale(1.45)}>特大</button>
-        </div>
-      )}
-
       <div className="wrap" style={{ zoom: fontScale }}>
         {/* 左侧历史抽屉 */}
         {showHistory && (
@@ -2550,7 +2568,7 @@ function AppInner() {
             </aside>
           </>
         )}
-        <RunBar pos="top" />
+        <RunBar pos="top" onHistory={() => setShowHistory(true)} fontScale={fontScale} setFontScale={setFontScale} />
 
         {/* 首页：未选体系、非学习模式时显示 HERO + 列表 */}
         {!selected && !learnMode && (
@@ -2590,7 +2608,8 @@ function AppInner() {
                   <div className="no">{String(i + 1).padStart(2, "0")}</div>
                   <div className="sym">{s.glyph}</div>
                   <div className="nm">{s.name}</div>
-                  <div className="st">{s.sub}</div>
+                  <div className="st"><b>定位</b>{s.pos}</div>
+                  <div className="ds"><b>用途</b>{s.use}</div>
                   <div className="pick">点选起局 →</div>
                 </button>
               );
@@ -2932,7 +2951,7 @@ function AppInner() {
               <p>「富甲天下」汇集小六壬、八字、奇门遁甲、梅花易数、六爻、塔罗六种问答体系。起局、排盘、成卦全部交由确定性算法在本地精确计算（四柱、奇门定局与值符值使、六爻卦象与世应、梅花卦数与体用等），再由 AI 依传统典籍体系只作文字解读，因此同一局面复算结果稳定，不会每次乱变。</p>
               <h4>六体系一览 · Six systems</h4>
               <ul className="sixlist">
-                {SYSTEMS.map((s) => <li key={s.id}><span className="n">{s.name}</span> <span className="s">— {s.sub}</span></li>)}
+                {SYSTEMS.map((s) => <li key={s.id}><span className="n">{s.name}</span> <span className="s">— {s.pos}</span></li>)}
               </ul>
               <h4>准确性说明 · Accuracy</h4>
               <ul>
