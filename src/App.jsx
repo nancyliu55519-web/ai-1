@@ -209,6 +209,20 @@ const JIEQI_BOUNDS = [
   { m: 1, d: 6 },
 ];
 
+// 清理AI输出里残留的 Markdown 记号（星号加粗、井号标题等），避免界面上出现 * #
+function cleanAiText(s) {
+  if (typeof s !== "string") return s;
+  let t = s;
+  t = t.replace(/\*\*(.+?)\*\*/g, "$1"); // **加粗** -> 去掉星号保留内容
+  t = t.replace(/\*(.+?)\*/g, "$1");         // *斜体* -> 去掉
+  t = t.replace(/^\s{0,3}#{1,6}\s+/gm, "");   // # 标题号 -> 去掉
+  t = t.replace(/^\s*[-*_]{3,}\s*$/gm, "");   // 整行的 --- 分隔线 -> 去掉
+  t = t.replace(/^\s*[*\-+]\s+/gm, "· ");    // 行首列点符 -> 中点
+  t = t.replace(/\*/g, "");                   // 兜底：剩余的孤立星号全清掉
+  t = t.replace(/\n{3,}/g, "\n\n");           // 压缩多余空行
+  return t;
+}
+
 function mod(n, m) {
   return ((n % m) + m) % m;
 }
@@ -1104,7 +1118,8 @@ const CHAT_STYLE = `你是一位懂传统术数、又特别会跟普通人聊天
 - 如果用户的问题信息不够（比如没说清问的是谁、什么事），可以先反问一句确认，再断。
 - 全程围绕下面这一个已经起好的局面来聊，不要重新起局或改变盘面数据。
 - 语气要自然亲切、有温度，别僵硬、别像念稿。拒绝任何请求时都客气柔和，别硬邦邦地怼回去。
-- 如果遇到涉及赌博下注、买彩票、猜球赛比分这类问题，不要生硬拒绝或说教——可以顺着卦象聊聊这件事的成败态势、顺逆倾向、谁占优，但不要给出具体的下注号码、确切比分、买哪一注这种明确指向，也温和提醒一句这类事有风险、要理性、后果自负。
+- 如果遇到涉及赌博下注、买彩票、猜球赛比分这类问题，不要顺着给方向——不要说谁占优、谁会赢、成败倾向、该买哪边，也不要给具体号码、确切比分、买哪一注。可以中性地聊聊「这件事大概什么时候会有结果、还要等多久」这类不涉及输赢的信息，并温和提醒这类事有风险、要理性、盈亏自负，点到为止。
+- 直接用纯文本自然表达，不要用 Markdown 标记：不要用星号 * 或 ** 来加粗、强调或列点，不要用 # 号做标题。要分点就用「一、二、三」或换行，要强调就用词语本身，绝对不要出现 * 号。
 - 如果用户发来图片（聊天截图、生活照、手相面相等），结合图片内容和当前卦象一起分析当下情况；对图片里的信息就事论事地讲，涉及相术时说明仅供参考、不下绝对结论。`;
 
 // 学习模式：AI 当术数老师，教用户八字、小六壬等知识
@@ -1115,7 +1130,8 @@ const LEARN_STYLE = `你是一位耐心、亲切的中国传统术数老师，�
 - 鼓励为主，学员答错了温和纠正、给正确解释，别打击。
 - 可以留小练习、举实际例子帮助理解。
 - 只讲知识、教方法，不要给某个具体的人算命或下吉凶断语——这是教学，不是问卜。
-- 语气自然口语，别端着，回答别太长，一次一个重点，方便学员消化。`;
+- 语气自然口语，别端着，回答别太长，一次一个重点，方便学员消化。
+- 用纯文本，不要用 Markdown：不要用星号 * 或 ** 加粗，不要用 # 标题，要分点就用「一、二、三」或换行，绝对不要出现 * 号。`;
 
 // 生成某个体系"这一局的盘面背景"，作为 system 提示的一部分，让模型全程记住这个盘
 function buildCastContext(systemId, extra) {
@@ -1337,7 +1353,7 @@ const DESIGN_CSS = `
 .bubble.me{align-self:flex-end;align-items:flex-end}
 .bubble.bot{align-self:flex-start;align-items:flex-start}
 .bubble .bot-name{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--gold-txt);margin:0 0 5px 4px}
-.bubble-body{padding:13px 17px;border-radius:16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:break-word}
+.bubble-body{padding:13px 17px;border-radius:16px;font-size:1.11em;line-height:1.85;white-space:pre-wrap;word-break:break-word}
 .bubble.me .bubble-body{background:var(--gold-bg);color:var(--ink);border:1px solid var(--gold-lt2);border-bottom-right-radius:5px}
 .bubble.bot .bubble-body{background:var(--card3);color:var(--ink3);border:1px solid var(--line2);border-bottom-left-radius:5px}
 .bubble-body.typing{color:#C9B896;font-style:normal}
@@ -1374,8 +1390,9 @@ const DESIGN_CSS = `
 .callout.verm{background:var(--verm-bg);border-left:3px solid var(--verm)} .callout.verm .lab{color:var(--verm)} .callout.verm .bd{color:#7a3830}
 .spread{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .spread.c3{grid-template-columns:1fr 1fr 1fr}
-.spread button{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border-radius:7px;padding:12px 10px;background:var(--card2);border:1px solid var(--line2);color:var(--ink-sub);cursor:pointer;transition:.15s}
-.spread button.on{background:var(--coffee);color:var(--cream);border-color:var(--coffee)}
+.spread button{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border-radius:7px;padding:12px 10px;background:var(--card3);border:1px solid var(--gold-lt2);color:var(--ink2);cursor:pointer;transition:.15s}
+.spread button:hover{border-color:var(--gold-lt);color:var(--ink)}
+.spread button.on{background:var(--gold);color:#1A1510;border-color:var(--gold);font-weight:600}
 .ymdrow{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
 .checkline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-sub);cursor:pointer;user-select:none}
 .checkline input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
@@ -1499,6 +1516,11 @@ const DESIGN_CSS = `
 @media(max-width:520px){.learn-row{gap:14px;padding:18px}.learn-row-go{display:none}.learn-row-glyph{width:46px;height:46px;font-size:24px}}
 /* 历史抽屉触发按钮：精致金边圆钮 */
 .hist-toggle{position:fixed;top:18px;left:18px;z-index:60;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#2A2318,#171310);border:1px solid var(--gold-lt2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.5px;box-shadow:0 6px 20px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,161,90,.15);transition:transform .15s,border-color .2s}
+.font-ctrl{position:fixed;top:18px;right:18px;z-index:60;display:flex;gap:2px;background:rgba(23,19,16,.92);border:1px solid var(--gold-lt2);border-radius:10px;padding:3px;box-shadow:0 6px 20px -6px rgba(0,0,0,.6);backdrop-filter:blur(4px)}
+.font-ctrl button{background:none;border:0;color:var(--ink-sub);font-size:12px;padding:5px 8px;border-radius:7px;cursor:pointer;transition:background .15s,color .15s;line-height:1}
+.font-ctrl button:hover{color:var(--gold-lt)}
+.font-ctrl button.on{background:var(--gold);color:#1A1510;font-weight:600}
+@media(max-width:520px){.font-ctrl button{padding:5px 6px;font-size:11px}}
 .hist-toggle:hover{transform:scale(1.06);border-color:var(--gold-lt)}
 .hist-toggle:active{transform:scale(.96)}
 .hist-toggle span{display:block;height:1.5px;background:var(--gold-lt);border-radius:2px;transition:width .2s}
@@ -1813,6 +1835,7 @@ function AppInner() {
   const [historyList, setHistoryList] = useState(loadHistory);
   const [showHistory, setShowHistory] = useState(false); // 左侧历史抽屉
   const [openHistGroups, setOpenHistGroups] = useState({}); // 历史按体系分组的展开状态
+  const [fontScale, setFontScale] = useState(1); // 字体大小：0.9小 / 1中 / 1.15大 / 1.3特大
   const currentHistoryRef = useRef(null); // 当前这一局对应的历史记录条目（不含最新messages，发消息时再补上）
 
   function upsertHistory(entry) {
@@ -2403,7 +2426,7 @@ function AppInner() {
   }
 
   return (
-    <div className="page">
+    <div className="page" style={{ fontSize: `${13.5 * fontScale}px` }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');`}</style>
       <style>{DESIGN_CSS}</style>
 
@@ -2458,6 +2481,16 @@ function AppInner() {
           <button className="hist-toggle" onClick={() => setShowHistory(true)} aria-label="历史记录">
             <span></span><span></span><span></span>
           </button>
+        )}
+
+        {/* 右上角 字体大小 */}
+        {entered && (
+          <div className="font-ctrl" aria-label="字体大小">
+            <button className={fontScale <= 0.9 ? "on" : ""} onClick={() => setFontScale(0.9)}>小</button>
+            <button className={fontScale === 1 ? "on" : ""} onClick={() => setFontScale(1)}>中</button>
+            <button className={fontScale === 1.15 ? "on" : ""} onClick={() => setFontScale(1.15)}>大</button>
+            <button className={fontScale >= 1.3 ? "on" : ""} onClick={() => setFontScale(1.3)}>特大</button>
+          </div>
         )}
 
         {/* 左侧历史抽屉 */}
@@ -2843,12 +2876,16 @@ function AppInner() {
               {messages.map((m, i) => (
                 <div key={i} className={"bubble " + (m.role === "user" ? "me" : "bot")}>
                   {m.img && <img className="bubble-img" src={m.img} alt="用户图片" />}
-                  {m.content && <div className="bubble-body">{m.content}</div>}
+                  {m.content && <div className="bubble-body">{m.role === "assistant" ? cleanAiText(m.content) : m.content}</div>}
                 </div>
               ))}
               {loading && (
                 <div className="bubble bot">
-                  <div className="bubble-body typing">正在理清局势…</div>
+                  <div className="bubble-body typing">
+                    {selected === "bazi" && messages.filter((m) => m.role === "assistant").length === 0
+                      ? "正在详细推算你的八字与过去脉络，内容较多，大约需要半分钟到一分钟，请稍候…"
+                      : "正在推算，请稍候（大约十几秒）…"}
+                  </div>
                 </div>
               )}
               <div ref={chatEndRef} />
@@ -2956,4 +2993,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
