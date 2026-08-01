@@ -1353,7 +1353,7 @@ const DESIGN_CSS = `
 .bubble.me{align-self:flex-end;align-items:flex-end}
 .bubble.bot{align-self:flex-start;align-items:flex-start}
 .bubble .bot-name{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--gold-txt);margin:0 0 5px 4px}
-.bubble-body{padding:13px 17px;border-radius:16px;font-size:1.11em;line-height:1.85;white-space:pre-wrap;word-break:break-word}
+.bubble-body{padding:13px 17px;border-radius:16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:break-word}
 .bubble.me .bubble-body{background:var(--gold-bg);color:var(--ink);border:1px solid var(--gold-lt2);border-bottom-right-radius:5px}
 .bubble.bot .bubble-body{background:var(--card3);color:var(--ink3);border:1px solid var(--line2);border-bottom-left-radius:5px}
 .bubble-body.typing{color:#C9B896;font-style:normal}
@@ -2426,7 +2426,7 @@ function AppInner() {
   }
 
   return (
-    <div className="page" style={{ fontSize: `${13.5 * fontScale}px` }}>
+    <div className="page">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');`}</style>
       <style>{DESIGN_CSS}</style>
 
@@ -2475,24 +2475,23 @@ function AppInner() {
         </div>
       )}
 
-      <div className="wrap">
-        {/* 左上角 ☰ —— 打开历史记录抽屉 */}
-        {entered && (
-          <button className="hist-toggle" onClick={() => setShowHistory(true)} aria-label="历史记录">
-            <span></span><span></span><span></span>
-          </button>
-        )}
+      {/* 左上角 ☰ 历史 —— 钉死在左上角，不随内容缩放 */}
+      {entered && (
+        <button className="hist-toggle" onClick={() => setShowHistory(true)} aria-label="历史记录">
+          <span></span><span></span><span></span>
+        </button>
+      )}
+      {/* 右上角 字体大小 —— 钉死在右上角 */}
+      {entered && (
+        <div className="font-ctrl" aria-label="字体大小">
+          <button className={fontScale <= 0.9 ? "on" : ""} onClick={() => setFontScale(0.9)}>小</button>
+          <button className={fontScale === 1 ? "on" : ""} onClick={() => setFontScale(1)}>中</button>
+          <button className={fontScale === 1.2 ? "on" : ""} onClick={() => setFontScale(1.2)}>大</button>
+          <button className={fontScale >= 1.45 ? "on" : ""} onClick={() => setFontScale(1.45)}>特大</button>
+        </div>
+      )}
 
-        {/* 右上角 字体大小 */}
-        {entered && (
-          <div className="font-ctrl" aria-label="字体大小">
-            <button className={fontScale <= 0.9 ? "on" : ""} onClick={() => setFontScale(0.9)}>小</button>
-            <button className={fontScale === 1 ? "on" : ""} onClick={() => setFontScale(1)}>中</button>
-            <button className={fontScale === 1.15 ? "on" : ""} onClick={() => setFontScale(1.15)}>大</button>
-            <button className={fontScale >= 1.3 ? "on" : ""} onClick={() => setFontScale(1.3)}>特大</button>
-          </div>
-        )}
-
+      <div className="wrap" style={{ zoom: fontScale }}>
         {/* 左侧历史抽屉 */}
         {showHistory && (
           <>
