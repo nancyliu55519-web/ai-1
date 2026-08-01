@@ -2,7 +2,6 @@ import React, { useState, useRef } from "react";
 import * as LunarLib from "lunar-javascript";
 
 // 用农历库把"当前中国时间"换算成农历月、日（避免手填出错）
-// 兼容不同打包环境的导出方式；万一库异常，退化为一个不至于崩溃的估算
 function getChinaLunarNow() {
   const nowUtc = new Date();
   const chinaMs = nowUtc.getTime() + (nowUtc.getTimezoneOffset() + 480) * 60000;
@@ -18,7 +17,6 @@ function getChinaLunarNow() {
     if (m < 0) m = -m;
     return { lunarMonth: m, lunarDay: lunar.getDay(), chinaHour: c.getHours() };
   } catch (e) {
-    // 农历库不可用时的兜底（粗略，仅保证不崩溃；正常情况走上面精确分支）
     return { lunarMonth: c.getMonth() + 1, lunarDay: c.getDate(), chinaHour: c.getHours() };
   }
 }
@@ -34,7 +32,6 @@ const SYSTEMS = [
   { id: "tarot", name: "塔罗", sub: "抽牌问心", glyph: "塔" },
 ];
 
-// 各体系简介（选中时展示，帮助用户理解其源流与所长）
 const SYSTEM_INTRO = {
   liuren:
     "小六壬相传为诸葛武侯所传，以「大安、留连、速喜、赤口、小吉、空亡」六神循环，用农历月、日、时辰三步掐指定局。长于对眼前小事、失物、行人、约见等即时之问速断吉凶。",
@@ -50,8 +47,6 @@ const SYSTEM_INTRO = {
     "塔罗以二十二张大阿尔卡纳为核心，每张牌象征一段人生原型与心理历程，正逆位各有其义。它更像一面映照当下心境的镜子，宜问处境、抉择与内在动因。",
 };
 
-// 完整 78 张塔罗牌（韦特体系）：name 中文名，code 图片代号，up/rev 正逆关键词
-// 图片来自公有领域韦特牌（metabismuth/tarot-json，RWS 美国公有领域），CDN 引用
 const TAROT_DECK = [
   { name: "愚者", code: "m00", up: "新的开始、冒险、纯真、自由、无限可能", rev: "鲁莽、盲目、逃避责任、犹豫不前" },
   { name: "魔术师", code: "m01", up: "创造、行动力、资源整合、自信、显化", rev: "欺瞒、才能未展、意志薄弱、操纵" },
@@ -133,18 +128,15 @@ const TAROT_DECK = [
   { name: "钱币国王", code: "p14", up: "富足、事业有成、稳健、掌控资源", rev: "贪婪、固执、以财自重" },
 ];
 
-// 牌图 CDN 地址（GitHub raw）。加载失败时前端会退化为"名称卡"占位，不会显示裂图。
 function tarotImg(code) {
   return `https://raw.githubusercontent.com/metabismuth/tarot-json/master/cards/${code}.jpg`;
 }
 
-// 兼容旧引用：名称→关键词
 const TAROT_MEANINGS = TAROT_DECK.reduce((acc, c) => {
   acc[c.name] = { up: c.up, rev: c.rev };
   return acc;
 }, {});
 
-// 牌阵：常用主题，positions 决定抽几张、每张牌位含义
 const TAROT_SPREADS = {
   single: { label: "直取核心 · 单张", group: "基础", positions: ["核心指引"] },
   overall: { label: "整体运势 · 三张", group: "基础", positions: ["现状", "阻碍/助力", "走向"] },
@@ -160,67 +152,50 @@ const TAROT_SPREADS = {
   health: { label: "身心调理 · 三张", group: "其他", positions: ["当前身心状态", "需留意之处", "调理方向"] },
 };
 
-// 「编年历」编辑排版设计系统 token（源自 MYSAO .dc.html 简报风格）
 const T = {
-  canvas: "#151210",      // 暖黑主背景
-  card: "#211D18",        // 卡片深褐黑
-  card2: "#1C1915",       // 略深
-  card3: "#2A251E",       // 卡片hover/浅一档
-  coffee: "#0E0B08",      // 更深(用于对话气泡AI侧等)
+  canvas: "#151210",
+  card: "#211D18",
+  card2: "#1C1915",
+  card3: "#2A251E",
+  coffee: "#0E0B08",
   coffeeDeep: "#0A0806",
-  ink: "#F3E8D2",         // 主文字：暖米金
-  ink2: "#E4D5B8",        // 次文字
-  ink3: "#D8C7A6",        // 正文
-  inkSub: "#A89377",      // 弱化文字
-  monoLabel: "#8A7355",   // mono标签
-  gold: "#C9A15A",        // 主金(铜金)
-  goldTxt: "#D9B978",     // 金色文字(深底上要更亮才看得清)
-  goldLt: "#E4C989",      // 亮金
-  goldLt2: "#B8894A",     // 暗铜金
-  goldBg: "#2E2415",      // 金色背景块(深底版)
-  jade: "#5FB88A",        // 翡翠绿(深底上提亮)
+  ink: "#F3E8D2",
+  ink2: "#E4D5B8",
+  ink3: "#D8C7A6",
+  inkSub: "#A89377",
+  monoLabel: "#8A7355",
+  gold: "#C9A15A",
+  goldTxt: "#D9B978",
+  goldLt: "#E4C989",
+  goldLt2: "#B8894A",
+  goldBg: "#2E2415",
+  jade: "#5FB88A",
   jadeBg: "#16241C",
   jadeBd: "#2C4A3A",
-  verm: "#D9705F",        // 朱红(深底上提亮)
+  verm: "#D9705F",
   vermBg: "#2A1815",
-  line: "#332C22",        // 分隔线
-  line2: "#3A3226",       // 分隔线2
+  line: "#332C22",
+  line2: "#3A3226",
   cream: "#241F18",
   creamDim: "#5A4E3C",
 };
 
-/* ---------------- 干支基础算法（确定性计算，不依赖AI） ---------------- */
+/* ---------------- 干支算法 ---------------- */
 
 const STEMS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
 const BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
 
 const JIEQI_BOUNDS = [
-  { m: 2, d: 4 },
-  { m: 3, d: 6 },
-  { m: 4, d: 5 },
-  { m: 5, d: 6 },
-  { m: 6, d: 6 },
-  { m: 7, d: 7 },
-  { m: 8, d: 8 },
-  { m: 9, d: 8 },
-  { m: 10, d: 8 },
-  { m: 11, d: 7 },
-  { m: 12, d: 7 },
-  { m: 1, d: 6 },
+  { m: 2, d: 4 }, { m: 3, d: 6 }, { m: 4, d: 5 }, { m: 5, d: 6 },
+  { m: 6, d: 6 }, { m: 7, d: 7 }, { m: 8, d: 8 }, { m: 9, d: 8 },
+  { m: 10, d: 8 }, { m: 11, d: 7 }, { m: 12, d: 7 }, { m: 1, d: 6 },
 ];
 
-function mod(n, m) {
-  return ((n % m) + m) % m;
-}
+function mod(n, m) { return ((n % m) + m) % m; }
 
-// 解析用户输入的一串"报数"文本，只保留有限、合理范围内的正整数。
-// 过滤：非数字、超长数字段（会溢出成 Infinity，或虽未溢出但超出双精度安全整数范围导致精度丢失）、0。
-// 带负号的数字段直接丢弃（而不是悄悄去掉负号当正数用）——报数起卦本就该报正数，
-// 保留负号会篡改用户真实输入却毫无提示，丢弃后交由调用方现有的"数量不足"校验去提示用户重报。
-// 输入为空/不含任何合法数字时返回空数组——调用方应据此判断是否要报错提示用户，而不是静默套默认值。
 function parsePositiveInts(str) {
   return ((str || "").match(/-?[0-9]+/g) || [])
-    .filter((s) => !s.startsWith("-") && s.length <= 15) // 15位以内，远小于 Number.MAX_SAFE_INTEGER 的16位，避免精度丢失
+    .filter((s) => !s.startsWith("-") && s.length <= 15)
     .map(Number)
     .filter((n) => Number.isFinite(n) && n >= 1 && n <= Number.MAX_SAFE_INTEGER);
 }
@@ -296,13 +271,11 @@ function computeBazi(date) {
   };
 }
 
-// ---------------- 八字精确排盘 + 大运（基于 lunar-javascript，节气精确到分钟，供「八字」体系专用） ----------------
 const { Solar: LSolar, Lunar: LLunar, LunarYear: LLunarYearClass, LunarMonth: LLunarMonthClass } = (function () {
   const base = LunarLib.default || LunarLib;
   return { Solar: base.Solar, Lunar: base.Lunar, LunarYear: base.LunarYear, LunarMonth: base.LunarMonth };
 })();
 
-// 查询某农历年是否有闰月，返回闰月月份数字（0 表示当年无闰月）
 function getLunarLeapMonth(lunarYear) {
   try {
     return LLunarYearClass.fromYear(Number(lunarYear)).getLeapMonth();
@@ -311,14 +284,12 @@ function getLunarLeapMonth(lunarYear) {
   }
 }
 
-// 某公历年月的实际天数（自动处理大小月与闰年）
 function daysInSolarMonth(year, month) {
   const y = Number(year), m = Number(month);
   if (!y || !m || m < 1 || m > 12) return 31;
   return new Date(Date.UTC(y, m, 0)).getUTCDate();
 }
 
-// 某农历年月（含是否闰月）的实际天数；查不到（比如该年根本没有这个闰月）时返回 0
 function daysInLunarMonth(year, month, isLeap) {
   const y = Number(year), m = Number(month);
   if (!y || !m || m < 1 || m > 12) return 30;
@@ -330,17 +301,11 @@ function daysInLunarMonth(year, month, isLeap) {
   }
 }
 
-// 出生日期/时间的范围校验：在交给 lunar-javascript 之前先自己把关，
-// 因为该库对"日"只校验绝对范围(1-31)，像 2月31日、4月31日这种"当月不存在"的日期会被静默 normalize
-// 成完全不同的日子而不报错（比如 1990-2-31 会被当成 1990-3-3 处理），比直接崩溃更危险。
 function validateBaziInputs(inputs) {
   const year = Number(inputs.year);
   const month = Number(inputs.month);
   const day = Number(inputs.day);
 
-  // 年份上限校验：不加的话超大年份（如 1e20）会让 Date.UTC 溢出成 NaN，
-  // 而 NaN 参与比较恒为 false，会绕过下面的 maxDay 校验一路捅到 lunar-javascript 库里，
-  // 导致 getLunar() 同步死循环卡死整个标签页（try/catch 完全防不住这种挂起，只能提前堵在这里）
   if (!Number.isInteger(year) || year < 1 || year > 9999) throw new Error("出生年份不对，请重新选择");
   if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error("出生月份不对，请重新选择");
   if (!Number.isInteger(day) || day < 1) throw new Error("出生日期不对，请重新选择");
@@ -359,7 +324,6 @@ function validateBaziInputs(inputs) {
   }
 }
 
-// inputs: { calendar:'solar'|'lunar', year, month, day, isLeapMonth, hour, minute, hourUnknown, gender:'male'|'female'|'unknown' }
 function computeBaziPrecise(inputs) {
   validateBaziInputs(inputs);
 
@@ -376,7 +340,6 @@ function computeBaziPrecise(inputs) {
       lunar = solar.getLunar();
     }
   } catch (e) {
-    // 兜底：即便上面的校验有漏网之鱼，也不让底层库的异常直接穿透到事件处理函数外层
     throw new Error("出生日期/时间不合法，请检查后重新填写");
   }
 
@@ -438,7 +401,6 @@ function computeBaziPrecise(inputs) {
   };
 }
 
-// 时辰倒推定盘：三大地支组（子午卯酉 / 寅申巳亥 / 辰戌丑未），供外貌/睡姿/性格初筛
 const SHICHEN_GROUPS = {
   ziwumaoyou: {
     label: "子午卯酉组",
@@ -460,7 +422,6 @@ const SHICHEN_GROUPS = {
   },
 };
 
-// 同一天不同地支时辰下的完整八字预览（时辰倒推候选比对用）
 const SHICHEN_HOUR_MAP = { 子: 0, 丑: 2, 寅: 4, 卯: 6, 辰: 8, 巳: 10, 午: 12, 未: 14, 申: 16, 酉: 18, 戌: 20, 亥: 22 };
 function buildShichenCandidates(calendar, year, month, day, isLeapMonth, branches, gender) {
   return branches.map((branch) => {
@@ -470,36 +431,21 @@ function buildShichenCandidates(calendar, year, month, day, isLeapMonth, branche
   });
 }
 
-// ---------------- 奇门遁甲：局数精确计算 ----------------
-// 依据用户提供的《阴阳遁局数对照表》：24节气分上元/中元/下元，各自固定局数
 const JIEQI_24 = [
-  { name: "小寒", m: 1, d: 6 },
-  { name: "大寒", m: 1, d: 20 },
-  { name: "立春", m: 2, d: 4 },
-  { name: "雨水", m: 2, d: 19 },
-  { name: "惊蛰", m: 3, d: 6 },
-  { name: "春分", m: 3, d: 21 },
-  { name: "清明", m: 4, d: 5 },
-  { name: "谷雨", m: 4, d: 20 },
-  { name: "立夏", m: 5, d: 6 },
-  { name: "小满", m: 5, d: 21 },
-  { name: "芒种", m: 6, d: 6 },
-  { name: "夏至", m: 6, d: 21 },
-  { name: "小暑", m: 7, d: 7 },
-  { name: "大暑", m: 7, d: 23 },
-  { name: "立秋", m: 8, d: 8 },
-  { name: "处暑", m: 8, d: 23 },
-  { name: "白露", m: 9, d: 8 },
-  { name: "秋分", m: 9, d: 23 },
-  { name: "寒露", m: 10, d: 8 },
-  { name: "霜降", m: 10, d: 23 },
-  { name: "立冬", m: 11, d: 7 },
-  { name: "小雪", m: 11, d: 22 },
-  { name: "大雪", m: 12, d: 7 },
-  { name: "冬至", m: 12, d: 22 },
+  { name: "小寒", m: 1, d: 6 }, { name: "大寒", m: 1, d: 20 },
+  { name: "立春", m: 2, d: 4 }, { name: "雨水", m: 2, d: 19 },
+  { name: "惊蛰", m: 3, d: 6 }, { name: "春分", m: 3, d: 21 },
+  { name: "清明", m: 4, d: 5 }, { name: "谷雨", m: 4, d: 20 },
+  { name: "立夏", m: 5, d: 6 }, { name: "小满", m: 5, d: 21 },
+  { name: "芒种", m: 6, d: 6 }, { name: "夏至", m: 6, d: 21 },
+  { name: "小暑", m: 7, d: 7 }, { name: "大暑", m: 7, d: 23 },
+  { name: "立秋", m: 8, d: 8 }, { name: "处暑", m: 8, d: 23 },
+  { name: "白露", m: 9, d: 8 }, { name: "秋分", m: 9, d: 23 },
+  { name: "寒露", m: 10, d: 8 }, { name: "霜降", m: 10, d: 23 },
+  { name: "立冬", m: 11, d: 7 }, { name: "小雪", m: 11, d: 22 },
+  { name: "大雪", m: 12, d: 7 }, { name: "冬至", m: 12, d: 22 },
 ];
 
-// [上元局, 中元局, 下元局]
 const JU_TABLE = {
   冬至: [1, 7, 4], 小寒: [2, 8, 5], 大寒: [3, 9, 6], 立春: [8, 5, 2],
   雨水: [9, 6, 3], 惊蛰: [1, 7, 4], 春分: [3, 9, 6], 清明: [4, 1, 7],
@@ -514,40 +460,13 @@ const YANG_TERMS = new Set([
   "春分", "清明", "谷雨", "立夏", "小满", "芒种",
 ]);
 
-// 奇门遁甲解读所依据的典籍体系
 const QIMEN_CLASSICS = ["《奇门遁甲统宗大全》", "《遁甲演义》（明·程道生）", "《御定奇门宝鉴》", "《开门之悟》（张志春）"];
-const FOUNDATION_CLASSICS = ["《五行大义》", "《天干地支》", "《周易本义》", "《阴阳五行解密》"];
+const LIUREN_CLASSICS = ["《小六壬基础与技法》", "《易经开悟》（煜燊）", "《小六壬入门通解》", "《五行大义》（隋·萧吉）"];
+const BAZI_CLASSICS = ["《三命通会》", "《渊海子平》", "《穷通宝鉴》", "《子平真诠》", "《滴天髓》"];
+const MEIHUA_CLASSICS = ["《梅花易数》", "《梅花心易疏证》", "《周易尚氏学》", "《皇极经世书解》"];
+const LIUYAO_CLASSICS = ["《古筮真诠》", "《增删卜易》", "《卜筮正宗》", "《黄金策》"];
+const TAROT_CLASSICS = ["《塔罗葵花宝典》", "《其实你已经很塔罗了》", "《78度的智慧》"];
 
-// 各体系解读所依据的典籍参考（用于「关于本站」展示 + 拼入AI提示，让措辞贴合传统体系而非现代简化说法）
-const LIUREN_CLASSICS = [
-  "《小六壬基础与技法》", "《易经开悟》（煜燊）", "《小六壬入门通解》（佚名）", "《五行大义》（隋·萧吉）",
-  "《高级小六壬》（合集）", "《祖传民间小六壬预测全集》（江春义）", "《小六壬归元典藏》（慕言秋水）",
-  "《诸葛亮神通风水小六壬》", "《增补万全玉匣记》（李真人/赵嘉宁译）", "《迷信历》（清·沈亮功）", "《百战奇略》（明·刘基）",
-];
-const BAZI_CLASSICS = [
-  "《三命通会》（明·万民英）", "《渊海子平》（宋·徐子平）", "《穷通宝鉴》", "《子平真诠》（清·沈孝瞻）",
-  "《滴天髓》（宋·京图）", "《李虚中命书》", "《星平会海》（明代合集）",
-  "洪丕谟《中国古代算命术》", "潘昭佑《八字揭秘》", "徐伟刚《子平术精析》",
-];
-const MEIHUA_CLASSICS = [
-  "《梅花易数》白话译注版（刘光本/荣益译注，1993）", "《宋惠彬易经系列—梅花易数/外应学》", "《梅花易数入门通解》（王炳中）",
-  "《梅花心易疏证》（杨波）", "《梅花易数实战详解》（黄鉴）", "《周易尚氏学》（尚秉和）", "《皇极经世书解》（邵雍原著）",
-  "明抄本《梅花易数》（韩国馆藏复刻）", "《邵康节先生心易梅花数》（子部珍本汇刊）", "民国《增删梅花易数》（袁树珊）",
-];
-const LIUYAO_CLASSICS = [
-  "《古筮真诠》（朱辰彬）", "《六爻入门与实战》（王虎应）", "《宋惠彬易经系列—六爻》", "《周易预测学》（邵伟华）",
-  "《六爻详真》（曲炜）", "《增删卜易》（清·野鹤老人）", "《卜筮正宗》（清·王洪绪）", "《黄金策》（明·刘伯温）",
-  "《火珠林》（宋·麻衣道者）", "《易隐》（清·曹九锡，黎光校注隐易千金断版）", "《易冒》（清·程良宝）",
-  "《卜筮心易妙法》（夏新仁）", "《六爻信息类象》（赵奎杰）", "《六爻速断讲义》（赵校晖）", "《筮学通考》（黎光）",
-  "《五行大义》（萧吉）", "《六爻预测走向高层次之路》（冯映彰）", "《六爻卦例说真》", "《周易与现代经济预测学》（廖墨香）",
-];
-const TAROT_CLASSICS = [
-  "《塔罗葵花宝典》（向日葵）", "《其实你已经很塔罗了》（保罗·福斯特）", "《你可以再塔罗一点》",
-  "《78度的智慧》（瑞秋·波拉克）", "《塔罗逆位精解》（玛丽·K·格瑞尔）", "《塔罗全书》（瑞秋）",
-  "《透特塔罗释义》（克劳利）", "《马赛塔罗》",
-];
-
-// 判断日期落在24节气中的哪一段（返回该段起始节气名）
 function getJieqiPeriod(date) {
   const y = date.getFullYear();
   const points = JIEQI_24.map((t) => ({ name: t.name, ts: Date.UTC(y, t.m - 1, t.d) }));
@@ -565,7 +484,6 @@ function getJieqiPeriod(date) {
   return period;
 }
 
-// 符头定元：干支为甲(stem0)或己(stem5)的日子是"符头"，其地支决定上/中/下元
 function getYuanIndex(date) {
   for (let back = 0; back < 10; back++) {
     const d = new Date(date);
@@ -573,9 +491,9 @@ function getYuanIndex(date) {
     const { stemIdx, branchIdx } = getDayGanZhi(d);
     if (stemIdx === 0 || stemIdx === 5) {
       const r = mod(branchIdx, 3);
-      if (r === 0) return 0; // 上元（子卯午酉）
-      if (r === 2) return 1; // 中元（寅巳申亥）
-      return 2; // 下元（辰未戌丑）
+      if (r === 0) return 0;
+      if (r === 2) return 1;
+      return 2;
     }
   }
   return 0;
@@ -590,18 +508,14 @@ function computeQimenJu(date) {
   return { period, dunType, yuanName, ju };
 }
 
-// ---------------- 奇门遁甲：排地盘 + 值符值使飞宫 ----------------
 const PALACE_NAMES = { 1: "坎", 2: "坤", 3: "震", 4: "巽", 5: "中", 6: "乾", 7: "兑", 8: "艮", 9: "离" };
 const DIPAN_STARS = { 1: "天蓬", 2: "天芮", 3: "天冲", 4: "天辅", 5: "天禽", 6: "天心", 7: "天柱", 8: "天任", 9: "天英" };
 const DIPAN_DOORS = { 1: "休门", 2: "死门", 3: "伤门", 4: "杜门", 6: "开门", 7: "惊门", 8: "生门", 9: "景门" };
 const SIX_YI_SAN_QI = ["戊", "己", "庚", "辛", "壬", "癸", "丁", "丙", "乙"];
 const XUN_SHOU_TO_YI = { 子: "戊", 戌: "己", 申: "庚", 午: "辛", 辰: "壬", 寅: "癸" };
 
-function wrapPalace(p) {
-  return mod(p - 1, 9) + 1;
-}
+function wrapPalace(p) { return mod(p - 1, 9) + 1; }
 
-// 三奇六仪按局数布入九宫：戊落局数对应之宫，阳遁顺布(1→9)、阴遁逆布(9→1)
 function layoutDiPan(dunType, ju) {
   const dir = dunType === "阳遁" ? 1 : -1;
   const stemToPalace = {};
@@ -615,7 +529,6 @@ function layoutDiPan(dunType, ju) {
   return { stemToPalace, palaceToStem };
 }
 
-// 精确算出当前时辰的干支、所在旬首、旬内第几格（stemIdx与之相同）
 function getHourInfo(date) {
   const ref = Date.UTC(1900, 0, 31, 12);
   const cur = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12);
@@ -624,14 +537,14 @@ function getHourInfo(date) {
   const idx = mod(dayOffset * 12 + hourBranchIdx, 60);
   const stemIdx = mod(idx, 10);
   const branchIdx = mod(idx, 12);
-  const xunShouIdx = idx - stemIdx; // 旬首在60循环中的索引，旬首天干必为甲
+  const xunShouIdx = idx - stemIdx;
   const xunShouBranchIdx = mod(xunShouIdx, 12);
   return {
     stem: STEMS[stemIdx],
     branch: BRANCHES[branchIdx],
     text: STEMS[stemIdx] + BRANCHES[branchIdx],
     xunShouBranch: BRANCHES[xunShouBranchIdx],
-    stepsInXun: stemIdx, // 距旬首经过的格数，0-9
+    stepsInXun: stemIdx,
   };
 }
 
@@ -641,22 +554,18 @@ function computeQimenFull(date) {
   const { stemToPalace } = layoutDiPan(juInfo.dunType, juInfo.ju);
   const hourInfo = getHourInfo(date);
 
-  // 旬首对应六仪 -> 该仪在地盘的宫位，即值符星/值使门的基准宫
   const xunYi = XUN_SHOU_TO_YI[hourInfo.xunShouBranch];
   const baseGong = stemToPalace[xunYi];
   const zhiFuStar = DIPAN_STARS[baseGong];
-  const zhiShiDoor = DIPAN_DOORS[baseGong] || DIPAN_DOORS[2]; // 中五宫寄坤二宫之门
+  const zhiShiDoor = DIPAN_DOORS[baseGong] || DIPAN_DOORS[2];
 
-  // 值符随时干飞宫：时干若为甲，用甲所隐的六仪(=旬首对应之仪)的宫位；否则直接查该时干在地盘的宫位
   const zhiFuGong = hourInfo.stem === "甲" ? baseGong : stemToPalace[hourInfo.stem];
 
-  // 值使随时辰走门：从旬首所在宫起，按阳顺阴逆走 stepsInXun 格（经过中5）
   let zhiShiGong = baseGong;
   for (let s = 0; s < hourInfo.stepsInXun; s++) zhiShiGong = wrapPalace(zhiShiGong + dir);
-  const jiGong = juInfo.dunType === "阳遁" ? 8 : 2; // 中5寄宫：阳遁寄艮8、阴遁寄坤2
+  const jiGong = juInfo.dunType === "阳遁" ? 8 : 2;
   const zhiShiDisplayGong = zhiShiGong === 5 ? jiGong : zhiShiGong;
 
-  // ---- 九宫完整飞盘（规则已用《奇门真传》阳遁三局例子逐宫验证）----
   const shiGanGong = hourInfo.stem === "甲" ? baseGong : stemToPalace[hourInfo.stem];
   const fullPan = buildQimenNineGong({
     stemToPalace, dir, baseGong,
@@ -679,40 +588,34 @@ function computeQimenFull(date) {
   };
 }
 
-// 本位：九宫五行、九星本位、八门本位
 const QM_STAR_HOME = { 1: "天蓬", 2: "天芮", 3: "天冲", 4: "天辅", 5: "天禽", 6: "天心", 7: "天柱", 8: "天任", 9: "天英" };
 const QM_DOOR_HOME = { 1: "休门", 2: "死门", 3: "伤门", 4: "杜门", 6: "开门", 7: "惊门", 8: "生门", 9: "景门" };
 const QM_GONG_WX = { 1: "水", 2: "土", 3: "木", 4: "木", 5: "土", 6: "金", 7: "金", 8: "土", 9: "火" };
-// 飞泊轨道（均已用《奇门真传》例子验证）
-const QM_STAR_ORBIT = [1, 2, 4, 8, 7, 6, 9, 3]; // 九星
-const QM_DOOR_ORBIT = [1, 6, 7, 2, 9, 4, 3, 8]; // 八门
-const QM_RING = [1, 8, 3, 4, 9, 2, 7, 6];       // 八神（洛书顺时针宫环）
+const QM_STAR_ORBIT = [1, 2, 4, 8, 7, 6, 9, 3];
+const QM_DOOR_ORBIT = [1, 6, 7, 2, 9, 4, 3, 8];
+const QM_RING = [1, 8, 3, 4, 9, 2, 7, 6];
 const QM_GODS = ["值符", "腾蛇", "太阴", "六合", "白虎", "玄武", "九地", "九天"];
 
-// 构建九宫完整飞盘：天盘干、地盘干、九星、八门、八神
 function buildQimenNineGong({ stemToPalace, dir, baseGong, shiGanGong, zhiShiRawGong }) {
   const palaceToStem = {};
   Object.entries(stemToPalace).forEach(([stem, g]) => { palaceToStem[g] = stem; });
   const norm = (g) => (g === 5 ? 2 : g);
 
-  // 九星：值符星从 baseGong 飞到 shiGanGong（home→dest 正向放置）
   const star = {}, tian = {};
   const starShift = mod(QM_STAR_ORBIT.indexOf(norm(shiGanGong)) - QM_STAR_ORBIT.indexOf(norm(baseGong)), 8);
   for (const home of QM_STAR_ORBIT) {
     const dst = QM_STAR_ORBIT[mod(QM_STAR_ORBIT.indexOf(home) + starShift, 8)];
     star[dst] = QM_STAR_HOME[home];
     let tg = palaceToStem[home];
-    if (home === 2 && !tg) tg = palaceToStem[5]; // 中5地盘干寄坤2
+    if (home === 2 && !tg) tg = palaceToStem[5];
     tian[dst] = tg || "";
   }
-  // 八门：值使门从 baseGong 飞到 zhiShiRawGong
   const door = {};
   const doorShift = mod(QM_DOOR_ORBIT.indexOf(norm(zhiShiRawGong)) - QM_DOOR_ORBIT.indexOf(norm(baseGong)), 8);
   for (const home of QM_DOOR_ORBIT) {
     const dst = QM_DOOR_ORBIT[mod(QM_DOOR_ORBIT.indexOf(home) + doorShift, 8)];
     door[dst] = QM_DOOR_HOME[home];
   }
-  // 八神：值符神从 shiGanGong（值符宫）起，顺时针布洛书环
   const god = {};
   const iZ = QM_RING.indexOf(norm(shiGanGong));
   for (let k = 0; k < 8; k++) god[QM_RING[mod(iZ + k, 8)]] = QM_GODS[k];
@@ -743,7 +646,6 @@ function buildQimenNineGong({ stemToPalace, dir, baseGong, shiGanGong, zhiShiRaw
 
 const SIX_PALACES = ["大安", "留连", "速喜", "赤口", "小吉", "空亡"];
 
-// 六宫对应之六亲、六神、星曜等（民间通行版本，不同流派/典籍在六神分配上略有出入，仅供参考）
 const SIX_PALACE_INFO = {
   大安: { wuxing: "木", liuqin: "父母", liushen: "青龙", star: "福星（木曜）", fangwei: "东方", renwu: "尊长、领导、老成之人", shenti: "肝胆、四肢", yingqi: "事已成形，宜静不宜动，主稳、主迟、主安" },
   留连: { wuxing: "木", liuqin: "兄弟", liushen: "勾陈", star: "计都（缠绕星）", fangwei: "东南", renwu: "同辈、朋友，牵缠之人", shenti: "肝胆、筋络", yingqi: "事未有定论，反复拖延、纠缠不清，宜缓图不宜急进" },
@@ -757,34 +659,27 @@ function computeXiaoLiuRen(lunarMonth, lunarDay, hour) {
   if (!Number.isFinite(lunarMonth) || !Number.isFinite(lunarDay) || !Number.isFinite(hour)) {
     throw new Error("起课数据不对，请重新填写");
   }
-  const hourNum = mod(Math.floor((hour + 1) / 2), 12) + 1; // 1=子..12=亥
-  // 大安起「月」，数到月落宫；再从月宫数「日」得日宫；再从日宫数「时辰」得自身宫
+  const hourNum = mod(Math.floor((hour + 1) / 2), 12) + 1;
   const monthIdx = mod(lunarMonth - 1, 6);
-  const dayIdx = mod(monthIdx + (lunarDay - 1), 6);      // 「日」落宫
-  const selfIdx = mod(dayIdx + (hourNum - 1), 6);         // 自身宫（时辰落宫）
-  const selfBranchIdx = mod(hourNum - 1, 12);             // 自身宫地支=时辰地支（子=0..亥=11）
+  const dayIdx = mod(monthIdx + (lunarDay - 1), 6);
+  const selfIdx = mod(dayIdx + (hourNum - 1), 6);
+  const selfBranchIdx = mod(hourNum - 1, 12);
   const palace = SIX_PALACES[selfIdx];
   return { palace, hourNum, info: SIX_PALACE_INFO[palace], selfIdx, dayIdx, selfBranchIdx };
 }
 
-// —— 小六壬完整排盘（严格按《小六壬》典籍规则）——
-// 装六神：以地支为准。寅卯青龙、巳午朱雀、丑辰勾陈、未戌腾蛇、申酉白虎、亥子玄武
 const LR_GOD_BY_BRANCH = { 寅: "青龙", 卯: "青龙", 巳: "朱雀", 午: "朱雀", 丑: "勾陈", 辰: "勾陈", 未: "腾蛇", 戌: "腾蛇", 申: "白虎", 酉: "白虎", 亥: "玄武", 子: "玄武" };
-// 起五星（天盘星）：以「日」落宫为准，从日宫起顺排 木火土金水天空
 const LR_FIVE_STARS = ["木星", "火星", "土星", "金星", "水星", "天空"];
 const LR_PALACE_WUXING = { 大安: "木", 留连: "土", 速喜: "火", 赤口: "金", 小吉: "水", 空亡: "土" };
 const LR_BRANCH_WX = { 子: "水", 丑: "土", 寅: "木", 卯: "木", 辰: "土", 巳: "火", 午: "火", 未: "土", 申: "金", 酉: "金", 戌: "土", 亥: "水" };
 
-// dayIdx=「日」落宫序，selfIdx=自身宫（时辰落宫）序；从自身宫隔位（+2）顺排地支
 function computeLiurenFullPan(dayIdx, selfIdx, selfBranchIdx) {
   const sheng = { 木: "火", 火: "土", 土: "金", 金: "水", 水: "木" };
   const ke = { 木: "土", 土: "水", 水: "火", 火: "金", 金: "木" };
-  // 从自身宫起，沿宫序每宫地支隔位(+2)顺排
   const palaces = SIX_PALACES.map((name, i) => {
     const off = mod(i - selfIdx, 6);
     const branch = BRANCHES[mod(selfBranchIdx + 2 * off, 12)];
     const branchWx = LR_BRANCH_WX[branch];
-    // 五星：从「日」宫起木星顺排
     const starOff = mod(i - dayIdx, 6);
     return {
       name, palaceWx: LR_PALACE_WUXING[name],
@@ -806,13 +701,10 @@ function computeLiurenFullPan(dayIdx, selfIdx, selfBranchIdx) {
   return palaces;
 }
 
-/* ---------------- 八卦 / 六十四卦 数据（供梅花、六爻确定性排卦） ---------------- */
+/* ---------------- 八卦 / 六十四卦 ---------------- */
 
-// 三爻二进制（由下而上，bit0=初爻）→ 卦名
 const TRIGRAM_BY_BITS = { 0: "坤", 1: "震", 2: "坎", 3: "兑", 4: "艮", 5: "离", 6: "巽", 7: "乾" };
-// 先天八卦数 1-8 → 卦名（乾1兑2离3震4巽5坎6艮7坤8）
 const TRIGRAM_BY_NUM = { 1: "乾", 2: "兑", 3: "离", 4: "震", 5: "巽", 6: "坎", 7: "艮", 8: "坤" };
-// 卦名 → 三爻二进制（由下而上）
 const TRIGRAM_BITS = { 乾: 7, 兑: 3, 离: 5, 震: 1, 巽: 6, 坎: 2, 艮: 4, 坤: 0 };
 const TRIGRAM_INFO = {
   乾: { symbol: "☰", nature: "天", element: "金" },
@@ -825,7 +717,6 @@ const TRIGRAM_INFO = {
   坤: { symbol: "☷", nature: "地", element: "土" },
 };
 
-// 六十四卦名：HEX_NAME[上卦][下卦]
 const HEX_NAME = {
   乾: { 乾: "乾为天", 坤: "天地否", 坎: "天水讼", 艮: "天山遁", 震: "天雷无妄", 巽: "天风姤", 离: "天火同人", 兑: "天泽履" },
   坤: { 乾: "地天泰", 坤: "坤为地", 坎: "地水师", 艮: "地山谦", 震: "地雷复", 巽: "地风升", 离: "地火明夷", 兑: "地泽临" },
@@ -837,7 +728,6 @@ const HEX_NAME = {
   兑: { 乾: "泽天夬", 坤: "泽地萃", 坎: "泽水困", 艮: "泽山咸", 震: "泽雷随", 巽: "泽风大过", 离: "泽火革", 兑: "兑为泽" },
 };
 
-// 六爻世爻位置（京房八宫，1=初爻…6=上爻），应爻 = 世±3
 const WORLD_LINE = {
   乾为天: 6, 天风姤: 1, 天山遁: 2, 天地否: 3, 风地观: 4, 山地剥: 5, 火地晋: 4, 火天大有: 3,
   坎为水: 6, 水泽节: 1, 水雷屯: 2, 水火既济: 3, 泽火革: 4, 雷火丰: 5, 地火明夷: 4, 地水师: 3,
@@ -849,7 +739,6 @@ const WORLD_LINE = {
   兑为泽: 6, 泽水困: 1, 泽地萃: 2, 泽山咸: 3, 水山蹇: 4, 地山谦: 5, 雷山小过: 4, 雷泽归妹: 3,
 };
 
-// 六爻由下而上（长度6，0阴1阳）→ {name, 上卦, 下卦}
 function hexFromLines(lines) {
   const lowerBits = lines[0] + lines[1] * 2 + lines[2] * 4;
   const upperBits = lines[3] + lines[4] * 2 + lines[5] * 4;
@@ -870,8 +759,6 @@ function shiYing(hexName) {
   return { shi, ying };
 }
 
-/* ---------------- 六爻起卦 ---------------- */
-
 function tossLine() {
   let sum = 0;
   for (let i = 0; i < 3; i++) sum += Math.random() < 0.5 ? 3 : 2;
@@ -885,9 +772,8 @@ function castLiuYao() {
   return lines;
 }
 
-// 由摇卦六爻推出本卦、变卦、动爻、世应
 function computeLiuYao(rawLines) {
-  const orig = rawLines.map((l) => l.value % 2); // 7/9→阳(1)，6/8→阴(0)
+  const orig = rawLines.map((l) => l.value % 2);
   const movingPositions = rawLines
     .map((l, i) => (l.value === 6 || l.value === 9 ? i + 1 : null))
     .filter(Boolean);
@@ -899,8 +785,6 @@ function computeLiuYao(rawLines) {
   return { ben, bian, movingPositions, sy: shiYing(ben.name) };
 }
 
-/* ---------------- 梅花易数起卦 ---------------- */
-
 function trigramFromNumber(n) {
   const r = mod(n, 8);
   return TRIGRAM_BY_NUM[r === 0 ? 8 : r];
@@ -910,7 +794,6 @@ function movingLineFromNumber(n) {
   return r === 0 ? 6 : r;
 }
 
-// numbersStr 有两个及以上数字→数字起卦；否则以当前时间（阳历干支变体）起卦
 function computeMeihua(numbersStr, now) {
   const nums = parsePositiveInts(numbersStr);
   let upperName, lowerName, movePos, method;
@@ -925,30 +808,26 @@ function computeMeihua(numbersStr, now) {
     method = `数字起卦：上卦取 ${a}（${upperName}），下卦取 ${b}（${lowerName}），动爻取诸数之和 ${sum}`;
   } else {
     const bz = computeBazi(now);
-    const yNum = bz.yearBranchIdx + 1; // 年支序 1-12
-    const mNum = getSolarMonthIndex(now) + 1; // 节气月序 1-12
-    const dNum = now.getDate(); // 阳历日
-    const hNum = mod(Math.floor((now.getHours() + 1) / 2), 12) + 1; // 时辰序 1-12
+    const yNum = bz.yearBranchIdx + 1;
+    const mNum = getSolarMonthIndex(now) + 1;
+    const dNum = now.getDate();
+    const hNum = mod(Math.floor((now.getHours() + 1) / 2), 12) + 1;
     upperName = trigramFromNumber(yNum + mNum + dNum);
     lowerName = trigramFromNumber(yNum + mNum + dNum + hNum);
     movePos = movingLineFromNumber(yNum + mNum + dNum + hNum);
     method = `时间起卦（阳历干支变体）：年支${yNum}＋节气月${mNum}＋日${dNum}＝上卦(${upperName})，再加时辰${hNum}＝下卦(${lowerName})，同数取动爻`;
   }
 
-  // 本卦六爻（由下而上）
   const lines = [...trigramLines(lowerName), ...trigramLines(upperName)];
   const ben = hexFromLines(lines);
 
-  // 变卦：翻动爻
   const changed = [...lines];
   changed[movePos - 1] = 1 - changed[movePos - 1];
   const bian = hexFromLines(changed);
 
-  // 互卦：取2、3、4爻为下卦，3、4、5爻为上卦
   const huLines = [lines[1], lines[2], lines[3], lines[2], lines[3], lines[4]];
   const hu = hexFromLines(huLines);
 
-  // 体用：动爻所在之卦为「用」，另一卦为「体」
   const moveInUpper = movePos >= 4;
   const yongName = moveInUpper ? upperName : lowerName;
   const tiName = moveInUpper ? lowerName : upperName;
@@ -966,9 +845,6 @@ function computeMeihua(numbersStr, now) {
   };
 }
 
-/* ---------------- 塔罗抽牌 ---------------- */
-
-// 随机抽牌：从78张里抽 count 张不重复，正逆随机
 function drawTarot(count) {
   const pool = [...TAROT_DECK];
   const drawn = [];
@@ -980,35 +856,32 @@ function drawTarot(count) {
   return drawn;
 }
 
-// 报数字起牌：用用户输入的数字确定抽哪些牌（牌序 mod 78）与正逆（奇偶）
-// nums 例如 [7, 21, 40]；不足时用相邻数字补
 function drawTarotByNumbers(nums, count) {
   const drawn = [];
   const used = new Set();
   for (let i = 0; i < count; i++) {
     let n = nums[i] != null ? nums[i] : nums.reduce((a, b) => a + b, i + 1);
-    if (!Number.isFinite(n)) n = i + 1; // 防御性兜底，理论上不会触发（上游已校验）
+    if (!Number.isFinite(n)) n = i + 1;
     let idx = mod(n - 1, TAROT_DECK.length);
-    // 避免重复
     let guard = 0;
     while (used.has(idx) && guard < TAROT_DECK.length) { idx = mod(idx + 1, TAROT_DECK.length); guard++; }
     used.add(idx);
     const card = TAROT_DECK[idx];
-    if (!card) continue; // 防御性兜底：理论上 idx 已被 mod 限制在合法范围内
-    const reversed = n % 2 === 0; // 偶数逆位
+    if (!card) continue;
+    const reversed = n % 2 === 0;
     drawn.push({ card: card.name, code: card.code, reversed });
   }
   return drawn;
 }
 
-/* ---------------- 对话式：起局背景 + 聊天风格 ---------------- */
+/* ---------------- 对话提示词 ---------------- */
 
-// 聊天版的"人设 + 风格"系统提示（作为 system 传给模型，全程生效）
 const CHAT_STYLE = `你是一位懂传统术数、又特别会跟普通人聊天的解读师。不要给自己起名字、也不要自称任何称号，就自然地跟对方对话即可。你的说话风格：
 - 用大白话、口语化中文，像微信上跟朋友聊天一样，别端着、别掉书袋。
 - 每次回答简短一些（一般 3~6 句话），这是连续对话，不用一次把话说尽，用户会追问。
 - 出现专业术语（某个宫、某个卦、某颗星、某个门）时，顺带用半句话解释它是什么、代表什么，别只甩术语。
 - 语气温和、给人鼓励，不用"绝对""一定""必然"这种把话说死的词。
+- 严禁使用星号（*）符号来做加粗、强调或列表符号！排版时请直接使用普通的中文标点与换行，切勿出现任何星号字符！
 - 少用"吉凶祸福""气运流转"这类空泛古文腔，多讲生活里的具体场景。
 - 如果用户的问题信息不够（比如没说清问的是谁、什么事），可以先反问一句确认，再断。
 - 全程围绕下面这一个已经起好的局面来聊，不要重新起局或改变盘面数据。
@@ -1016,17 +889,16 @@ const CHAT_STYLE = `你是一位懂传统术数、又特别会跟普通人聊天
 - 如果遇到涉及赌博下注、买彩票、猜球赛比分这类问题，不要生硬拒绝或说教——可以顺着卦象聊聊这件事的成败态势、顺逆倾向、谁占优，但不要给出具体的下注号码、确切比分、买哪一注这种明确指向，也温和提醒一句这类事有风险、要理性、后果自负。
 - 如果用户发来图片（聊天截图、生活照、手相面相等），结合图片内容和当前卦象一起分析当下情况；对图片里的信息就事论事地讲，涉及相术时说明仅供参考、不下绝对结论。`;
 
-// 学习模式：AI 当术数老师，教用户八字、小六壬等知识
 const LEARN_STYLE = `你是一位耐心、亲切的中国传统术数老师，正在一对一教学员入门。教学范围包括：八字（四柱、十神、五行、大运流年）、小六壬（六宫、六神、六亲）、奇门遁甲、梅花易数、六爻、塔罗等。教学要求：
 - 用大白话讲，像老师带新手，循序渐进，别一上来堆术语；出现术语必须马上用生活化的例子解释清楚。
 - 每次讲一个小知识点就好，讲完可以问一句"这块懂了吗／要不要举个例子"，等学员回应再往下，像真的上课一样有来有回。
+- 严禁使用星号（*）符号来做加粗、强调或列表符号！排版时请直接使用普通的中文标点与换行，切勿出现任何星号字符！
 - 学员问什么就顺着教什么；如果学员没方向，可以主动给个入门路线（比如学八字先认十天干十二地支→五行生克→排四柱→看十神），让他选从哪学起。
 - 鼓励为主，学员答错了温和纠正、给正确解释，别打击。
 - 可以留小练习、举实际例子帮助理解。
 - 只讲知识、教方法，不要给某个具体的人算命或下吉凶断语——这是教学，不是问卜。
 - 语气自然口语，别端着，回答别太长，一次一个重点，方便学员消化。`;
 
-// 生成某个体系"这一局的盘面背景"，作为 system 提示的一部分，让模型全程记住这个盘
 function buildCastContext(systemId, extra) {
   switch (systemId) {
     case "liuren": {
@@ -1071,37 +943,28 @@ function buildCastContext(systemId, extra) {
         `全程基于这些数据（日主五行、格局、十神、大运流年）来聊，不要改动干支、不要重新排盘。${placeLine}${nowLine}\n` +
         `断法参酌 ${BAZI_CLASSICS.slice(0, 5).join("、")} 等传统命理体系。\n\n` +
         `【八字解读流程——你的第一条回复必须严格按下面几步走，用清晰的小标题分段，内容要详实、有料，不要简略】\n` +
-        `第一步「核验往事」：根据此八字的大运流年、十神、神煞，推算此人过去真实可能发生过的事，列出恰好 10 条，按人生阶段分组（童年0-12岁、少年13-18岁、青年19-30岁、成年31岁至今，各阶段分配若干条，合计10条）。每条都要写得具体、有画面感、可核对——不只是「学业有波动」，而要像「大约X岁前后，学习上遇到一次明显的挫折或转折，可能是转学、成绩下滑或与老师同学关系紧张」这样有情节、有方向。方面可涉及：学业、健康疾病伤灾、搬家迁移、父母长辈家庭变故、感情起伏分合、财运升降、事业工作转折、贵人小人等。\n` +
+        `第一步「核验往事」：根据此八字的大运流年、十神、神煞，推算此人过去真实可能发生过的事，列出恰好 10 条，按人生阶段分组（童年0-12岁、少年13-18岁、青年19-30岁、成年31岁至今，各阶段分配若干条，合计10条）。每条都要写得具体、有画面感、可核对。切勿使用星号做加粗，使用纯文字！\n` +
         `第一步结束后，必须停下来明确对求测者说：「以上这 10 条，你对照一下自己的经历，准不准？如果有明显不对的地方，请一定及时告诉我（哪条不符、实际是什么情况），我会据此校准，再往下给你完整的八字报告。」——然后就停在这里等用户回应，先不要急着往下给报告。\n` +
-        `（等用户确认或反馈后，再继续下面几步）\n` +
         `第二步「过去脉络」：结合用户的反馈，用几句话总结此人过去整体运势走向、点出关键转折大运。\n` +
-        `第三步「详细八字报告」：这是重点，要写得充实专业，至少包含——（1）日主强弱旺衰、判断喜用神和忌神，讲清楚为什么；（2）明确点出命格格局，用专业术语并解释，比如「伤官见官」「财官双美」「食神制杀」「印重身旺」「从财格」等，说清这个格局对人生意味着什么；（3）性格禀性特质；（4）事业、财运、婚姻感情、健康各方面的详细倾向；（5）当前所走大运流年的具体影响。\n` +
-        `第四步「开运调理」：根据喜用神，给出实用的开运建议——喜用什么五行、对应适合穿什么颜色的衣服、日常适合佩戴什么材质/颜色的饰品配件、有利的方位方向、可留意的行业或生活习惯等，讲得具体可操作。\n` +
-        `第五步「问所求」：最后主动问——「你现在最想深入看哪方面（事业/财运/感情婚姻/健康/某个具体决定等）？我再针对性帮你细看。」\n` +
-        `整体要求：这是一份有价值、值得付费的专业解读，务必详实、有深度、有具体命格术语和可操作建议，不要泛泛而谈、不要简短敷衍。语气亲切自然，像有经验的老师在给人看盘，术语随讲随用大白话解释。`
+        `第三步「详细八字报告」：这是重点，要写得充实专业。\n` +
+        `第四步「开运调理」：根据喜用神，给出实用的开运建议。\n` +
+        `第五步「问所求」：最后主动问求测者下一步想看哪方面。`
       );
     }
     case "qimen":
       return (
         `【本局背景·奇门遁甲】以下为算法精确起出的盘，全程据此聊，不要重新起局：\n` +
         `局：${extra.dunType}${extra.ju}局（节气：${extra.period}，${extra.yuanName}）\n` +
-        `地盘（宫位数字：${Object.entries(PALACE_NAMES).map(([k, v]) => `${k}=${v}`).join("、")}）：` +
-        `${Object.entries(extra.diPan).map(([stem, gong]) => `${stem}在${gong}宫(${PALACE_NAMES[gong]})`).join("、")}\n` +
+        `地盘：${Object.entries(extra.diPan).map(([stem, gong]) => `${stem}在${gong}宫(${PALACE_NAMES[gong]})`).join("、")}\n` +
         `当前时辰：${extra.hourInfo.text}（旬首：${extra.xunYi}在${extra.baseGong}宫）\n` +
         `值符星：${extra.zhiFuStar}飞临${extra.zhiFuGong}宫(${PALACE_NAMES[extra.zhiFuGong]})；值使门：${extra.zhiShiDoor}行至${extra.zhiShiGong}宫(${PALACE_NAMES[extra.zhiShiGong]})\n` +
-        `完整九宫盘（天盘干/地盘干·九星·八门·八神）：${[1,2,3,4,5,6,7,8,9].map((g)=>{const c=extra.fullPan&&extra.fullPan[g];if(!c)return "";if(g===5)return `中5宫[地盘${c.diStem}·天禽]`;return `${g}宫${c.name}[${c.tianStem}/${c.diStem}·${c.star}·${c.door}·${c.god}]`;}).filter(Boolean).join("；")}。断法参酌 ${QIMEN_CLASSICS.join("、")} 的传统体系。\n\n` +
-        `【奇门遁甲专用断法要求——务必遵守】\n` +
-        `- 奇门遁甲以盘断事，不是聊天讲道理。这一局怎么答，答案必须从值符值使、九星八门、宫位生克、三奇六仪里面找，不是从「人生道理」「情绪安慰」里面找。\n` +
-        `- 每一句实质性的话都要挂靠到具体的盘面元素上（某星临某宫、某门旺衰、值符值使的位置关系等），不能脱离盘面讲空泛的大道理或纯安慰话。\n` +
-        `- 安慰、鼓励类的话最多一两句意思一下就行，不要占篇幅、不要成为回答的重心；重心永远是把这局盘讲清楚、讲透。\n` +
-        `- 多轮追问时也要一直扣着这一局的盘面元素回答，不要聊着聊着就脱离盘面变成通用的心灵鸡汤或人生建议。`
+        `完整九宫盘：${[1,2,3,4,5,6,7,8,9].map((g)=>{const c=extra.fullPan&&extra.fullPan[g];if(!c)return "";if(g===5)return `中5宫[地盘${c.diStem}·天禽]`;return `${g}宫${c.name}[${c.tianStem}/${c.diStem}·${c.star}·${c.door}·${c.god}]`;}).filter(Boolean).join("；")}。`
       );
     case "meihua":
       return (
         `【本局背景·梅花易数】以下为算法精确起出的卦，全程据此聊，不要重新起卦：\n` +
         `起卦方式：${extra.method}；本卦：${extra.ben.name}（上${extra.upperName}下${extra.lowerName}），第 ${extra.movePos} 爻动；互卦：${extra.hu.name}；变卦：${extra.bian.name}\n` +
-        `体用：体卦${extra.ti.name}(${extra.ti.element})，用卦${extra.yong.name}(${extra.yong.element})。以体为求测之主、用为所问之事，看体用生克比和，参酌互卦（过程）、变卦（结果）。\n` +
-        `断法参酌 ${MEIHUA_CLASSICS.slice(0, 5).join("、")} 等传统体例。`
+        `体用：体卦${extra.ti.name}(${extra.ti.element})，用卦${extra.yong.name}(${extra.yong.element})。`
       );
     case "liuyao":
       return (
@@ -1111,8 +974,7 @@ function buildCastContext(systemId, extra) {
         (extra.movingPositions.length
           ? `动爻：第 ${extra.movingPositions.join("、")} 爻；变卦：${extra.bian.name}（上${extra.bian.upper}下${extra.bian.lower}）\n`
           : `六爻皆静，无动爻变卦，以本卦断\n`) +
-        (extra.sy ? `世爻在第 ${extra.sy.shi} 爻，应爻在第 ${extra.sy.ying} 爻\n` : "") +
-        `按卦名卦义、世应关系与动爻取用来断。断法参酌 ${LIUYAO_CLASSICS.slice(0, 5).join("、")} 等传统技法。`
+        (extra.sy ? `世爻在第 ${extra.sy.shi} 爻，应爻在第 ${extra.sy.ying} 爻\n` : "")
       );
     case "tarot":
       return (
@@ -1123,14 +985,14 @@ function buildCastContext(systemId, extra) {
                 c.reversed ? TAROT_MEANINGS[c.card].rev : TAROT_MEANINGS[c.card].up
               }`
           )
-          .join("\n")}\n结合牌位与牌义来聊，关键词仅供参照，依情境灵活阐发。断法参酌 ${TAROT_CLASSICS.slice(0, 5).join("、")} 等塔罗体系。`
+          .join("\n")}`
       );
     default:
       return "";
   }
 }
 
-/* ---------------- 展示层：设计系统（编年历风格） ---------------- */
+/* ---------------- 样式 ---------------- */
 
 const LATIN = {
   liuren: "LIU-REN",
@@ -1155,11 +1017,13 @@ const DESIGN_CSS = `
   --verm:${T.verm};--verm-bg:${T.vermBg};
   --line:${T.line};--line2:${T.line2};--cream:${T.cream};--cream-dim:${T.creamDim};
   --serif:'Noto Serif SC',serif;--sans:'Noto Sans SC',sans-serif;--mono:'Space Mono',monospace;
+  --base-size:16px;
+  --bubble-size:17px;
 }
-.page{background:var(--canvas);min-height:100vh;color:var(--ink3);font-family:var(--sans);font-size:13.5px;line-height:1.8;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.page{background:var(--canvas);min-height:100vh;color:var(--ink3);font-family:var(--sans);font-size:var(--base-size);line-height:1.85;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .wrap{max-width:1120px;margin:0 auto;padding:0 24px 40px}
 .serif{font-family:var(--serif)} .mono{font-family:var(--mono)}
-.runbar{display:flex;justify-content:space-between;align-items:center;gap:12px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mono-label)}
+.runbar{display:flex;justify-content:space-between;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mono-label)}
 .runbar.top{border-bottom:1px solid var(--line2);padding:12px 0}
 .runbar.bot{border-top:1px solid var(--line2);padding:14px 0;margin-top:40px}
 .runbar .r{text-align:right}
@@ -1169,261 +1033,161 @@ const DESIGN_CSS = `
 .hero{background:var(--coffee);color:var(--cream);border-radius:10px;margin-top:64px;padding:46px 46px 40px;position:relative;overflow:hidden;box-shadow:0 20px 60px -34px rgba(21,17,11,.7)}
 .hero-grid{display:grid;grid-template-columns:1fr 300px;gap:40px;align-items:center}
 .hero h1{font-family:var(--serif);font-weight:900;color:#FBF3E2;font-size:clamp(44px,6.6vw,72px);line-height:1.05;letter-spacing:.14em;margin:18px 0 12px}
-.hero-sub{font-family:var(--sans);font-weight:300;font-size:15px;color:var(--cream-dim);max-width:460px;line-height:1.85;margin:0}
+.hero-sub{font-family:var(--sans);font-weight:300;font-size:var(--base-size);color:var(--cream-dim);max-width:460px;line-height:1.85;margin:0}
 .htags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
-.htag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#E6D9BF;border:1px solid rgba(216,184,120,.4);border-radius:3px;padding:3px 9px}
+.htag{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#E6D9BF;border:1px solid rgba(216,184,120,.4);border-radius:3px;padding:3px 9px}
 .hero-meta{margin-top:26px;padding-top:18px;border-top:1px solid rgba(216,184,120,.22);display:flex;gap:30px;flex-wrap:wrap}
-.hmeta .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-lt2)}
-.hmeta .v{font-family:var(--mono);font-size:13px;color:var(--cream);margin-top:3px}
+.hmeta .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-lt2)}
+.hmeta .v{font-family:var(--mono);font-size:14px;color:var(--cream);margin-top:3px}
 .hero-wheel{display:flex;justify-content:center}
 .section{padding:40px 0 0}
 .sec-head{margin:0 0 22px}
-.sec-head h2{font-family:var(--serif);font-weight:700;color:var(--ink);font-size:26px;line-height:1.25;margin:13px 0 6px;letter-spacing:.02em}
-.sec-head .lead{font-size:13.5px;color:var(--ink-sub);max-width:660px;margin:0}
+.sec-head h2{font-family:var(--serif);font-weight:700;color:var(--ink);font-size:28px;line-height:1.25;margin:13px 0 6px;letter-spacing:.02em}
+.sec-head .lead{font-size:var(--base-size);color:var(--ink-sub);max-width:660px;margin:0}
 .sys-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line2);border:1px solid var(--line2);border-radius:8px;overflow:hidden}
 .sys{background:var(--card);padding:22px 20px;position:relative;cursor:pointer;transition:background .18s;min-height:120px;display:flex;flex-direction:column;text-align:left;border:0;font:inherit;color:inherit;width:100%}
 .sys:hover{background:var(--card3)}
-.sys .no{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--mono-label)}
-.sys .sym{position:absolute;top:16px;right:20px;font-family:var(--serif);font-weight:900;font-size:34px;color:var(--gold-lt);opacity:.55;line-height:1}
-.sys .nm{font-family:var(--serif);font-weight:700;font-size:19px;color:var(--ink);margin:14px 0 3px}
-.sys .st{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-txt)}
-.sys .ds{font-size:12px;color:var(--ink-sub);margin-top:10px;line-height:1.7;flex:1}
-.sys .pick{margin-top:12px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mono-label)}
+.sys .no{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--mono-label)}
+.sys .sym{position:absolute;top:16px;right:20px;font-family:var(--serif);font-weight:900;font-size:36px;color:var(--gold-lt);opacity:.55;line-height:1}
+.sys .nm{font-family:var(--serif);font-weight:700;font-size:21px;color:var(--ink);margin:14px 0 3px}
+.sys .st{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-txt)}
+.sys .ds{font-size:calc(var(--base-size) - 1px);color:var(--ink-sub);margin-top:10px;line-height:1.7;flex:1}
+.sys .pick{margin-top:12px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mono-label)}
 .sys.sel{background:var(--coffee)}
 .backbar{padding:24px 0 0 60px}
-.backbtn{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-sub);cursor:pointer;transition:background .18s}
+.backbtn{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:13px;letter-spacing:.08em;color:var(--ink-sub);cursor:pointer;transition:background .18s}
 .backbtn:hover{background:var(--card3);color:var(--ink)}
 .backbtn:disabled{opacity:.45;cursor:not-allowed}
-.backbtn:disabled:hover{background:var(--card)}
 .chat{display:flex;flex-direction:column;gap:14px;margin:6px 0 16px;min-height:120px}
-.chat-hint{background:var(--card);border:1px dashed var(--line2);border-radius:10px;padding:16px 18px;color:var(--ink-sub);font-size:14px;line-height:1.7}
-.bazi-start-btn{background:var(--gold);color:#1A1510;border:0;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .18s}
-.bazi-start-btn:hover{opacity:.9}
-.bazi-start-btn:disabled{opacity:.4;cursor:default}
-.bubble{max-width:86%;display:flex;flex-direction:column}
+.chat-hint{background:var(--card);border:1px dashed var(--line2);border-radius:10px;padding:16px 18px;color:var(--ink-sub);font-size:var(--base-size);line-height:1.7}
+.bazi-start-btn{background:var(--gold);color:#1A1510;border:0;border-radius:10px;padding:12px 22px;font-size:var(--base-size);font-weight:600;cursor:pointer;transition:opacity .18s}
+.bubble{max-width:88%;display:flex;flex-direction:column}
 .bubble.me{align-self:flex-end;align-items:flex-end}
 .bubble.bot{align-self:flex-start;align-items:flex-start}
-.bubble .bot-name{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--gold-txt);margin:0 0 5px 4px}
-.bubble-body{padding:13px 17px;border-radius:16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:break-word}
+.bubble-body{padding:14px 18px;border-radius:16px;font-size:var(--bubble-size);line-height:1.9;white-space:pre-wrap;word-break:break-word}
 .bubble.me .bubble-body{background:var(--gold-bg);color:var(--ink);border:1px solid var(--gold-lt2);border-bottom-right-radius:5px}
 .bubble.bot .bubble-body{background:var(--card3);color:var(--ink3);border:1px solid var(--line2);border-bottom-left-radius:5px}
 .bubble-body.typing{color:#C9B896;font-style:normal}
 .chat-input{position:sticky;bottom:12px;z-index:5;display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 10px 10px 16px;box-shadow:0 6px 24px rgba(58,42,26,.18)}
-.chat-box{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15px;line-height:1.6;color:var(--ink);resize:none;max-height:140px}
-.send-btn{flex:0 0 auto;background:var(--gold);color:#1A1510;border:0;border-radius:10px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .18s}
+.chat-box{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:var(--bubble-size);line-height:1.6;color:var(--ink);resize:none;max-height:140px}
+.send-btn{flex:0 0 auto;background:var(--gold);color:#1A1510;border:0;border-radius:10px;padding:11px 20px;font-size:var(--base-size);font-weight:600;cursor:pointer;transition:opacity .18s}
 .send-btn:disabled{opacity:.4;cursor:default}
 .img-btn{flex:0 0 auto;background:none;border:0;font-size:22px;cursor:pointer;padding:4px 6px;align-self:center}
 .bubble-img{max-width:180px;max-height:220px;border-radius:12px;margin-bottom:6px;display:block;object-fit:cover}
 .img-preview{display:flex;align-items:center;gap:10px;margin-bottom:8px;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:8px 10px}
 .img-preview img{width:52px;height:52px;object-fit:cover;border-radius:8px}
 .img-preview button{background:none;border:1px solid var(--line2);border-radius:8px;color:var(--verm);font-size:12px;padding:5px 10px;cursor:pointer}
-.sys.sel .no{color:var(--gold-lt2)} .sys.sel .sym{color:var(--gold-lt);opacity:.85} .sys.sel .nm{color:#FBF3E2} .sys.sel .st{color:var(--gold-lt)} .sys.sel .ds{color:var(--cream-dim)}
-.chip-sel{display:inline-block;align-self:flex-start;background:var(--jade);color:#fff;font-family:var(--mono);font-size:10px;border-radius:3px;padding:2px 8px;letter-spacing:.06em;margin-top:12px}
-.intro{font-size:13px;line-height:1.85;color:var(--ink-sub);border-left:3px solid var(--gold);background:var(--gold-bg);padding:12px 16px;border-radius:0 6px 6px 0;margin:0 0 22px}
 .form-card{background:var(--card);border:1px solid var(--line2);border-radius:10px;box-shadow:0 6px 30px rgba(58,42,26,.14);padding:32px 34px}
-.form-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px}
-.form-head .ft{font-family:var(--serif);font-weight:700;font-size:18px;color:var(--ink)}
-.form-head .fm{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mono-label);text-align:right;padding-top:4px}
-.flabel{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-txt);display:block;margin-bottom:7px}
+.flabel{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-txt);display:block;margin-bottom:7px}
 .fgrid{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;align-items:start}
-.qbox{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:11px 12px;font-family:var(--sans);font-size:13.5px;color:var(--ink2);outline:none;resize:vertical;min-height:104px;box-sizing:border-box}
-.qbox:focus,.fin:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,146,74,.12)}
-.fin{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;color:var(--ink2);outline:none;box-sizing:border-box}
-.selbox{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:13.5px;color:var(--ink2);outline:none;box-sizing:border-box;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238A6D38'><path d='M5.5 7.5l4.5 4.5 4.5-4.5z'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-.selbox:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,146,74,.12)}
-.spread-positions{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
-.pos-chip{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--gold-txt);background:var(--gold-bg);border-radius:3px;padding:3px 8px}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.callout{border-radius:7px;padding:13px 16px;font-size:12.5px;line-height:1.75}
-.callout .lab{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:5px}
-.callout.jade{background:var(--jade-bg);border-left:3px solid var(--jade)} .callout.jade .lab{color:var(--jade)} .callout.jade .bd{color:#2c5a44}
-.callout.gold{background:var(--gold-bg);border-left:3px solid var(--gold)} .callout.gold .lab{color:var(--gold-txt)} .callout.gold .bd{color:#5f4c24}
-.callout.verm{background:var(--verm-bg);border-left:3px solid var(--verm)} .callout.verm .lab{color:var(--verm)} .callout.verm .bd{color:#7a3830}
-.spread{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.spread.c3{grid-template-columns:1fr 1fr 1fr}
-.spread button{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border-radius:7px;padding:12px 10px;background:var(--card2);border:1px solid var(--line2);color:var(--ink-sub);cursor:pointer;transition:.15s}
+.fin,.selbox{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:10px 12px;font-family:var(--sans);font-size:var(--base-size);color:var(--ink2);outline:none;box-sizing:border-box}
+.spread button{font-family:var(--mono);font-size:12px;letter-spacing:.04em;border-radius:7px;padding:12px 10px;background:var(--card2);border:1px solid var(--line2);color:var(--ink-sub);cursor:pointer}
 .spread button.on{background:var(--coffee);color:var(--cream);border-color:var(--coffee)}
-.ymdrow{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
-.checkline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-sub);cursor:pointer;user-select:none}
-.checkline input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
-.shichen{margin-top:10px;padding:16px;background:var(--card2);border:1px dashed var(--line2);border-radius:8px}
-.shichen-groups{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-.shichen-card{text-align:left;background:var(--card);border:1px solid var(--line2);border-radius:7px;padding:12px 14px;cursor:pointer;transition:.15s}
-.shichen-card:hover{background:var(--card3);border-color:var(--gold)}
-.shichen-cands{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-.shichen-cand{text-align:left;background:var(--card);border:1px solid var(--line2);border-radius:7px;padding:12px 14px;cursor:pointer;transition:.15s}
-.shichen-cand:hover{background:var(--card3);border-color:var(--gold)}
-.sc-title{font-family:var(--serif);font-weight:700;font-size:14px;color:var(--ink);margin-bottom:6px}
-.sc-line{font-size:12px;color:var(--ink-sub);line-height:1.7}
-.sc-pick{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--gold-txt);margin-top:6px}
-.btn{width:100%;background:var(--gold);color:var(--card);border:0;border-radius:7px;padding:13px;font-family:var(--serif);font-weight:700;font-size:15px;letter-spacing:.3em;box-shadow:0 6px 22px -14px rgba(58,42,26,.7);cursor:pointer;transition:filter .15s,opacity .15s}
-.btn:hover{filter:brightness(.96)} .btn:disabled{opacity:.6;cursor:default}
-.btn.ghost{background:transparent;color:var(--gold-txt);border:1px solid var(--gold);box-shadow:none;letter-spacing:.2em;font-size:13px;width:auto;padding:11px 22px}
-.btn-row{display:flex;gap:12px;align-items:stretch;margin-top:18px}
-.errline{font-family:var(--mono);font-size:11px;color:var(--verm);margin:14px 0 0}
-.loading{display:flex;align-items:center;gap:16px;margin-top:22px;padding:20px 26px;background:var(--card);border:1px dashed var(--gold);border-radius:10px}
-.loading .lg{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--gold-txt);letter-spacing:.14em;animation:pulse 1.4s ease-in-out infinite}
-.loading .lm{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mono-label)}
-@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
-.castbar{background:var(--coffee);color:var(--cream);border-radius:10px;padding:24px 28px;margin-top:22px;box-shadow:0 16px 44px -32px rgba(21,17,11,.85)}
-.cb-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid rgba(243,236,224,.14);padding-bottom:12px;margin-bottom:6px}
-.cb-code{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-lt2)}
-.datarow{display:grid;grid-template-columns:104px 1fr;gap:14px;padding:9px 0;border-bottom:1px solid rgba(243,236,224,.08)}
-.datarow:last-child{border-bottom:0}
-.datarow .dk{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-lt2);padding-top:3px}
-.datarow .dv{font-family:var(--mono);font-size:13px;color:var(--cream);letter-spacing:.02em;font-variant-numeric:tabular-nums}
-.datarow .dv .ser{font-family:var(--serif);font-weight:700;font-size:15px;color:#FBF3E2}
-.minihex{display:flex;flex-direction:column;gap:5px}
-.mh-row{display:flex;align-items:center;gap:9px}
-.mh-lab{font-family:var(--mono);font-size:9px;color:var(--gold-lt2);width:14px;text-align:center}
-.mh-bar{display:flex;gap:7px;width:64px}
-.mh-seg{height:7px;border-radius:1px;background:var(--gold-lt2)}
-.mh-chg{font-family:var(--mono);font-size:10px;color:var(--verm)}
-.mh-chg.y{color:var(--jade)}
-.result{position:relative;background:var(--card);border:1px solid var(--line2);border-radius:10px;box-shadow:0 6px 30px rgba(58,42,26,.14);padding:40px 42px;overflow:hidden}
-.result::before{content:'';position:absolute;inset:14px;border:1px solid var(--line);border-radius:6px;pointer-events:none}
-.r-head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
-.r-head h3{font-family:var(--serif);font-weight:700;font-size:24px;color:var(--ink);margin:0}
-.r-head .rmeta{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mono-label);margin-top:6px}
-.rbody{position:relative;z-index:1;font-family:var(--serif);font-weight:500;font-size:16px;line-height:2.05;color:var(--ink2);white-space:pre-wrap}
-.rfoot{position:relative;z-index:1;margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mono-label)}
-.seal{flex:0 0 auto;width:58px;height:58px;border-radius:6px;background:var(--verm);color:#F7EDE4;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:19px;line-height:1.02;transform:rotate(-3deg);box-shadow:0 4px 14px -8px rgba(58,42,26,.7);letter-spacing:.04em;animation:sealIn .5s ease-out}
-@keyframes sealIn{0%{opacity:0;transform:scale(1.8) rotate(-3deg)}60%{opacity:1;transform:scale(.94) rotate(-3deg)}100%{opacity:1;transform:scale(1) rotate(-3deg)}}
-.acc{margin-top:12px;background:var(--card);border:1px solid var(--line2);border-radius:10px;overflow:hidden}
-.acc summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:16px 22px;font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink)}
-.acc summary::-webkit-details-marker{display:none}
-.acc .hint{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mono-label)}
-.acc-body{padding:2px 22px 24px;border-top:1px solid var(--line)}
-.acc-body h4{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-txt);margin:20px 0 9px}
-.acc-body p{font-size:12.5px;line-height:1.85;color:var(--ink3);margin:0 0 10px}
-.acc-body ul{margin:0;padding-left:18px}
-.acc-body li{font-size:12.5px;line-height:1.8;color:var(--ink3);margin-bottom:4px}
-.sixlist{display:grid;grid-template-columns:1fr 1fr;gap:3px 24px;list-style:none;padding:0!important;margin:0}
-.sixlist li{margin:0}.sixlist .n{font-family:var(--serif);font-weight:700;color:var(--ink)}.sixlist .s{color:var(--mono-label)}
-.history-list{display:flex;flex-direction:column;gap:10px}
-.history-item summary .hint{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--mono-label);font-weight:400;text-transform:none}
-.hist-msg{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--line)}
-.hist-msg:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
-.hist-role{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-txt);margin-bottom:4px}
-.hist-role.bot{color:var(--jade)}
-.hist-content{font-size:13px;line-height:1.75;color:var(--ink3);white-space:pre-wrap}
-.foot-note{text-align:center;font-size:11px;color:var(--ink-sub);opacity:.75;max-width:470px;margin:16px auto 24px;line-height:1.7}
-@media(max-width:820px){
-  .hero{padding:36px 28px 32px}
-  .hero-grid{grid-template-columns:1fr;gap:26px}
-  .hero-wheel{order:-1}
-  .sys-grid{grid-template-columns:1fr 1fr}
-  .fgrid{grid-template-columns:1fr;gap:18px}
+.btn{width:100%;background:var(--gold);color:var(--card);border:0;border-radius:7px;padding:13px;font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.3em;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--gold-txt);border:1px solid var(--gold);box-shadow:none;letter-spacing:.2em;font-size:14px;width:auto;padding:11px 22px}
+.errline{font-family:var(--mono);font-size:12px;color:var(--verm);margin:14px 0 0}
+
+/* 固定在右上角的字号调节控件 */
+.font-toggle-bar{
+  position:fixed;
+  top:18px;
+  right:18px;
+  z-index:60;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  background:rgba(23,19,16,0.92);
+  border:1px solid var(--gold-lt2);
+  border-radius:22px;
+  padding:3px 8px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.6);
+  backdrop-filter:blur(8px);
 }
-@media(max-width:520px){
-  .wrap{padding:0 14px 30px}
-  .sys-grid{grid-template-columns:1fr}
-  .frow{grid-template-columns:1fr}
-  .datarow{grid-template-columns:76px 1fr;gap:10px}
-  .result,.form-card{padding:22px 18px}
-  .hero{padding:28px 20px 26px}
-  .castbar{padding:18px 18px}
-  .runbar{flex-wrap:wrap;gap:6px}
-  .hmeta{min-width:0}
-  h1{font-size:40px !important;word-break:break-word}
-  .spread{flex-wrap:wrap}
-  .spread button{flex:1 1 auto}
-  .ymdrow{grid-template-columns:1fr 1fr;grid-template-areas:"y y" "m d"}
-  .ymdrow input:first-child{grid-area:y}
+.font-toggle-label{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--gold-txt);
+  margin-right:2px;
+  padding-left:4px;
+  user-select:none;
 }
-.page,.wrap,.hero,.section,.castbar,.form-card,.result,.chat,.chat-input,.bubble{max-width:100%;overflow-wrap:break-word}
-.datarow .dv{overflow-wrap:break-word;min-width:0}
-.intro-screen{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at center,#1A1510 0%,#0A0806 100%);display:flex;align-items:center;justify-content:center;cursor:pointer;animation:introFade .8s ease-out}
-@keyframes introFade{from{opacity:0}to{opacity:1}}
-.intro-inner{display:flex;flex-direction:column;align-items:center;text-align:center;user-select:none}
-.intro-bagua{margin-bottom:26px}
-.intro-tri{transform-origin:100px 100px;animation:spin 60s linear infinite}
-.intro-taiji{transform-origin:100px 100px;animation:spinR 24s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes spinR{to{transform:rotate(-360deg)}}
-.intro-title{font-family:var(--serif);font-weight:900;font-size:38px;letter-spacing:.32em;color:#E4C989;text-indent:.32em;margin-bottom:10px;text-shadow:0 0 24px rgba(201,161,90,.35)}
-.intro-sub{font-family:var(--mono);font-size:12px;letter-spacing:.28em;color:#A89377;text-indent:.28em;margin-bottom:38px}
-.intro-hint{font-size:13px;letter-spacing:.2em;color:#C9A15A;text-indent:.2em;animation:breathe 2.4s ease-in-out infinite}
-@keyframes breathe{0%,100%{opacity:.4}50%{opacity:1}}
-.learn-entry{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:linear-gradient(135deg,#2A2015 0%,#1C1712 100%);border:1px solid var(--gold-lt2);border-radius:12px;padding:22px 24px;cursor:pointer;transition:border-color .18s,transform .1s}
-.learn-entry:hover{border-color:var(--gold-lt)}
-.learn-entry:active{transform:scale(.995)}
-.learn-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--gold-txt);margin-bottom:8px}
-.learn-title{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--gold-lt);margin-bottom:6px}
-.learn-sub{font-size:12.5px;color:var(--ink-sub);line-height:1.6}
-.learn-entry-r{flex:0 0 auto;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--gold);white-space:nowrap}
-@media(max-width:520px){.learn-entry{flex-direction:column;align-items:flex-start;gap:12px}}
-.sys.sys-learn{background:linear-gradient(135deg,rgba(201,161,90,.12),rgba(28,23,18,0))}
-.sys.sys-learn .sym{color:var(--gold-lt)}
-.learn-row{width:100%;display:flex;align-items:center;gap:18px;text-align:left;background:linear-gradient(120deg,#241C10 0%,#1A1611 60%,#15120E 100%);border:1px solid var(--gold-lt2);border-radius:14px;padding:20px 24px;cursor:pointer;transition:border-color .2s,box-shadow .2s;position:relative;overflow:hidden}
-.learn-row::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(201,161,90,.14),transparent 70%);pointer-events:none}
-.learn-row:hover{border-color:var(--gold-lt);box-shadow:0 8px 30px -18px rgba(201,161,90,.5)}
-.learn-row-glyph{flex:0 0 auto;width:54px;height:54px;border-radius:12px;border:1px solid var(--gold-lt2);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:28px;color:var(--gold-lt);background:rgba(201,161,90,.08)}
-.learn-row-body{flex:1;min-width:0}
-.learn-row-title{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--gold-lt);letter-spacing:.04em;margin-bottom:5px}
-.learn-row-sub{font-size:13px;color:var(--ink-sub);line-height:1.6}
-.learn-row-go{flex:0 0 auto;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--gold);white-space:nowrap}
-@media(max-width:520px){.learn-row{gap:14px;padding:18px}.learn-row-go{display:none}.learn-row-glyph{width:46px;height:46px;font-size:24px}}
-/* 历史抽屉触发按钮：精致金边圆钮 */
-.hist-toggle{position:fixed;top:18px;left:18px;z-index:60;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#2A2318,#171310);border:1px solid var(--gold-lt2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.5px;box-shadow:0 6px 20px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,161,90,.15);transition:transform .15s,border-color .2s}
+.font-btn{
+  background:transparent;
+  border:0;
+  color:var(--ink-sub);
+  font-size:12px;
+  padding:4px 8px;
+  cursor:pointer;
+  border-radius:14px;
+  font-family:var(--sans);
+  transition:all 0.15s;
+}
+.font-btn.on{
+  background:var(--gold-bg);
+  color:var(--gold-lt);
+  font-weight:bold;
+  border:1px solid var(--gold-lt2);
+}
+
+/* 固定在左上角的历史记录按钮 */
+.hist-toggle{
+  position:fixed;
+  top:18px;
+  left:18px;
+  z-index:60;
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#2A2318,#171310);
+  border:1px solid var(--gold-lt2);
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3.5px;
+  box-shadow:0 6px 20px -6px rgba(0,0,0,.6);
+  transition:transform .15s,border-color .2s
+}
 .hist-toggle:hover{transform:scale(1.06);border-color:var(--gold-lt)}
-.hist-toggle:active{transform:scale(.96)}
 .hist-toggle span{display:block;height:1.5px;background:var(--gold-lt);border-radius:2px;transition:width .2s}
 .hist-toggle span:nth-child(1){width:16px}
 .hist-toggle span:nth-child(2){width:11px}
 .hist-toggle span:nth-child(3){width:16px}
-.hist-toggle:hover span:nth-child(2){width:16px}
-.drawer-mask{position:fixed;inset:0;z-index:70;background:rgba(8,6,4,.6);animation:introFade .2s ease-out}
-.drawer{position:fixed;top:0;left:0;bottom:0;z-index:71;width:82%;max-width:340px;background:#171310;border-right:1px solid var(--gold-lt2);display:flex;flex-direction:column;box-shadow:8px 0 40px rgba(0,0,0,.5);animation:drawerIn .24s ease-out}
-@keyframes drawerIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 6px;font-family:var(--serif);font-size:17px;color:var(--gold-lt)}
+
+.drawer-mask{position:fixed;inset:0;z-index:70;background:rgba(8,6,4,.6)}
+.drawer{position:fixed;top:0;left:0;bottom:0;z-index:71;width:82%;max-width:340px;background:#171310;border-right:1px solid var(--gold-lt2);display:flex;flex-direction:column;box-shadow:8px 0 40px rgba(0,0,0,.5)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 6px;font-family:var(--serif);font-size:18px;color:var(--gold-lt)}
 .drawer-x{background:none;border:0;color:var(--ink-sub);font-size:16px;cursor:pointer;padding:4px 6px}
-.drawer-sub{padding:0 18px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ink-sub);border-bottom:1px solid var(--line2)}
-.drawer-empty{padding:30px 20px;color:var(--ink-sub);font-size:13px;line-height:1.7}
+.drawer-sub{padding:0 18px 12px;font-family:var(--mono);font-size:11px;color:var(--ink-sub);border-bottom:1px solid var(--line2)}
+.drawer-empty{padding:30px 20px;color:var(--ink-sub);font-size:14px;line-height:1.7}
 .drawer-list{flex:1;overflow-y:auto;padding:10px 12px}
 .drawer-item{display:flex;align-items:stretch;gap:6px;margin-bottom:8px}
-.drawer-item-main{flex:1;min-width:0;text-align:left;background:rgba(42,37,30,.6);border:1px solid var(--line2);border-radius:9px;padding:10px 12px;cursor:pointer;transition:border-color .15s}
-.drawer-item-main:hover{border-color:var(--gold-lt2)}
-.drawer-item.cur .drawer-item-main{border-color:var(--gold);background:rgba(201,161,90,.1)}
-.drawer-item-sys{font-family:var(--mono);font-size:10px;color:var(--gold-txt);letter-spacing:.06em;margin-bottom:3px}
-.drawer-item-sum{font-size:13px;color:var(--ink2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.drawer-item-time{font-size:10px;color:var(--ink-sub);margin-top:4px}
+.drawer-item-main{flex:1;min-width:0;text-align:left;background:rgba(42,37,30,.6);border:1px solid var(--line2);border-radius:9px;padding:10px 12px;cursor:pointer}
+.drawer-item-sys{font-family:var(--mono);font-size:11px;color:var(--gold-txt);margin-bottom:3px}
+.drawer-item-sum{font-size:14px;color:var(--ink2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drawer-item-time{font-size:11px;color:var(--ink-sub);margin-top:4px}
 .drawer-item-del{flex:0 0 auto;width:30px;background:none;border:1px solid var(--line2);border-radius:9px;color:var(--ink-sub);font-size:12px;cursor:pointer}
-.drawer-item-del:hover{color:var(--verm);border-color:var(--verm)}
-.drawer-clear{margin:8px 14px 18px;padding:10px;background:none;border:1px solid var(--line2);border-radius:9px;color:var(--ink-sub);font-size:12px;cursor:pointer}
-.drawer-clear:hover{color:var(--verm);border-color:var(--verm)}
-.lr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}
-.lr-cell{background:rgba(42,37,30,.7);border:1px solid var(--line2);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;color:var(--ink3)}
-.lr-cell.self{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
-.lr-top{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 0;font-size:12px}
-.lr-god{color:var(--ink2);font-weight:600}
-.lr-star{color:var(--gold-txt);font-family:var(--serif)}
-.lr-gz{padding:6px 10px 0;font-size:15px;font-family:var(--serif);color:var(--ink)}
-.lr-gz em{font-style:normal;font-size:10px;color:var(--ink-sub);margin-left:1px}
-.lr-qin{padding:3px 10px 0;font-size:11px;color:var(--gold-lt);text-align:right}
-.lr-name{padding:3px 10px 7px;font-size:14px;font-family:var(--serif);font-weight:700;color:var(--ink)}
-.lr-wx{margin-top:auto;text-align:center;color:#F5EFE3;font-size:11px;padding:3px 0;letter-spacing:.3em;opacity:.92}
-@media(max-width:520px){.lr-gz{font-size:13px}.lr-cell{min-width:0}.lr-top{padding:6px 7px 0;font-size:11px}.lr-name,.lr-qin,.lr-gz{padding-left:7px;padding-right:7px}}
-.qm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:14px}
-.qm-cell{background:rgba(42,37,30,.7);border:1px solid var(--line2);border-radius:8px;padding:8px 8px;min-height:92px;display:flex;flex-direction:column;gap:2px}
-.qm-cell.zhifu{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
-.qm-cell.zhishi{border-color:var(--jade)}
-.qm-center{align-items:center;justify-content:center;gap:3px;background:rgba(30,26,21,.9)}
-.qm-god{font-size:10px;color:var(--jade);letter-spacing:.05em}
-.qm-cell.zhifu .qm-god{color:var(--gold-lt)}
-.qm-row1{display:flex;justify-content:space-between;font-size:12px}
-.qm-star{color:var(--ink2);font-weight:600}
-.qm-door{color:var(--gold-txt);font-weight:600}
-.qm-gan{text-align:center;font-family:var(--serif);font-size:16px;color:var(--gold-lt);letter-spacing:.05em}
-.qm-tian{color:var(--gold-lt)}
-.qm-slash{color:var(--ink-sub);font-size:11px;margin:0 2px}
-.qm-di{color:var(--ink3)}
-.qm-row3{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--ink-sub);margin-top:auto}
-.qm-wx{color:var(--ink-sub)}
-.qm-digit{font-size:11px;color:var(--ink-sub)}
-.qm-center .qm-name{font-size:11px;color:var(--ink-sub)}
-.qm-center .qm-di{font-family:var(--serif);font-size:18px;color:var(--gold-lt)}
-@media(max-width:520px){.qm-gan{font-size:14px}.qm-cell{padding:6px 5px;min-height:82px;gap:1px}.qm-row1{font-size:10px}.qm-god,.qm-row3{font-size:9px}}
+.drawer-clear{margin:8px 14px 18px;padding:10px;background:none;border:1px solid var(--line2);border-radius:9px;color:var(--ink-sub);font-size:13px;cursor:pointer}
+
+.intro-screen{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at center,#1A1510 0%,#0A0806 100%);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.intro-inner{display:flex;flex-direction:column;align-items:center;text-align:center;user-select:none}
+.intro-title{font-family:var(--serif);font-weight:900;font-size:42px;letter-spacing:.32em;color:#E4C989;margin-bottom:10px}
+.intro-sub{font-family:var(--mono);font-size:13px;letter-spacing:.28em;color:#A89377;margin-bottom:38px}
+.intro-hint{font-size:14px;letter-spacing:.2em;color:#C9A15A}
+
+.learn-row{width:100%;display:flex;align-items:center;gap:18px;text-align:left;background:linear-gradient(120deg,#241C10 0%,#1A1611 60%,#15120E 100%);border:1px solid var(--gold-lt2);border-radius:14px;padding:20px 24px;cursor:pointer}
+.learn-row-glyph{flex:0 0 auto;width:54px;height:54px;border-radius:12px;border:1px solid var(--gold-lt2);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:28px;color:var(--gold-lt);background:rgba(201,161,90,.08)}
+.learn-row-body{flex:1;min-width:0}
+.learn-row-title{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--gold-lt);margin-bottom:5px}
+.learn-row-sub{font-size:var(--base-size);color:var(--ink-sub);line-height:1.6}
+.learn-row-go{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--gold)}
+
+@media(max-width:520px){
+  .wrap{padding:0 14px 30px}
+  .sys-grid{grid-template-columns:1fr}
+  .font-toggle-label{display:none}
+}
 `;
 
 function Kicker({ code, label, onDark }) {
@@ -1453,9 +1217,8 @@ function Callout({ tone, label, children }) {
   );
 }
 
-// SVG 八卦轮：太极 + 先天八卦符号（浓咖啡底、金色细线）
 function BaguaWheel() {
-  const trigrams = ["☰", "☴", "☵", "☶", "☷", "☳", "☲", "☱"]; // 先天圆图，自顶部顺时针
+  const trigrams = ["☰", "☴", "☵", "☶", "☷", "☳", "☲", "☱"];
   const cx = 140, cy = 140, r = 118;
   return (
     <svg width="252" height="252" viewBox="0 0 280 280" role="img" aria-label="八卦轮">
@@ -1468,7 +1231,6 @@ function BaguaWheel() {
           <text key={i} x={x} y={y} fill={T.goldLt} fontSize="19" textAnchor="middle" dominantBaseline="central" opacity="0.85">{g}</text>
         );
       })}
-      {/* 太极 */}
       <circle cx={cx} cy={cy} r="34" fill="#EAD9B5" />
       <path d={`M${cx},${cy - 34} A34,34 0 0 1 ${cx},${cy + 34} A17,17 0 0 1 ${cx},${cy} A17,17 0 0 0 ${cx},${cy - 34} Z`} fill="#2a2013" />
       <circle cx={cx} cy={cy - 17} r="5.5" fill="#2a2013" />
@@ -1478,10 +1240,9 @@ function BaguaWheel() {
   );
 }
 
-// 六爻迷你卦爻图（raw：初爻→上爻，value 6/7/8/9）
 function MiniHex({ raw }) {
   const labels = ["初", "二", "三", "四", "五", "上"];
-  const rows = raw.map((l, i) => ({ ...l, lab: labels[i] })).reverse(); // 上爻在上
+  const rows = raw.map((l, i) => ({ ...l, lab: labels[i] })).reverse();
   return (
     <div className="minihex">
       {rows.map((l, i) => {
@@ -1508,64 +1269,7 @@ function MiniHex({ raw }) {
   );
 }
 
-// 时辰倒推定盘向导：外貌/睡姿/性格初筛缩小到一个地支组，再从4个候选时辰里对比大运/流年选定一个
-function ShichenWizard({ calendar, year, month, day, isLeapMonth, gender, groupKey, onPickGroup, onConfirmHour, onBackToGroup }) {
-  if (!groupKey) {
-    return (
-      <div className="shichen">
-        <Callout tone="gold" label="第一步 · 外貌与性格初筛">先看看自己更符合下面哪一组的描述（大致判断即可，不必精确）：</Callout>
-        <div className="shichen-groups">
-          {Object.entries(SHICHEN_GROUPS).map(([key, g]) => (
-            <button key={key} type="button" className="shichen-card" onClick={() => onPickGroup(key)}>
-              <div className="sc-title">{g.label}</div>
-              <div className="sc-line"><b>外貌/睡姿：</b>{g.appearance}</div>
-              <div className="sc-line"><b>性格/排行：</b>{g.personality}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const group = SHICHEN_GROUPS[groupKey];
-  let candidates = [];
-  try {
-    candidates = buildShichenCandidates(calendar, year, month, day, isLeapMonth, group.branches, gender || "unknown");
-  } catch (e) {
-    return <Callout tone="verm" label="出错了">候选推算失败，检查一下出生年月日是否填写正确。</Callout>;
-  }
-
-  return (
-    <div className="shichen">
-      <Callout tone="gold" label="第二步 · 核心验证">
-        已初筛到「{group.label}」，共 {candidates.length} 个候选时辰。请回想人生中的重大节点（升学、结婚、生育、破财、重大伤病等发生的年份），对照下面各候选时辰推出的大运/流年，看哪个更吻合，再选定一个——这一步无法保证精确，仅供参考。
-      </Callout>
-      <div className="shichen-cands">
-        {candidates.map((c) => {
-          const r = c.result;
-          const dayun = r.dayun.unknownGender ? r.dayun.male : r.dayun;
-          const dayunPreview = dayun.list.slice(1, 4).map((d) => `${d.ganzhi}(${d.startAge}-${d.endAge}岁)`).join("、");
-          return (
-            <button key={c.branch} type="button" className="shichen-cand" onClick={() => onConfirmHour(c.branch, c.hour)}>
-              <div className="sc-title">{c.branch}时（约 {String(c.hour).padStart(2, "0")}:00-{String((c.hour + 2) % 24).padStart(2, "0")}:00）</div>
-              <div className="sc-line">时柱：<span className="ser">{r.pillars.hour}</span></div>
-              <div className="sc-line">大运预览：{dayunPreview}</div>
-              <div className="sc-pick">选这个时辰 →</div>
-            </button>
-          );
-        })}
-      </div>
-      <button type="button" className="btn ghost" style={{ marginTop: 12 }} onClick={onBackToGroup}>← 重新选一组</button>
-    </div>
-  );
-}
-
-/* ---------------- 聊天图片上传：大小限制 + 压缩重编码参数 ---------------- */
-const IMAGE_MAX_RAW_MB = 20; // 原始文件大小上限，超过直接拒绝（避免卡死浏览器）
-const IMAGE_MAX_DIMENSION = 1280; // 重编码后最长边像素上限
-const IMAGE_JPEG_QUALITY = 0.82; // 重编码 JPEG 质量
-
-/* ---------------- 历史记录（本地存储，不经过任何服务器） ---------------- */
+/* ---------------- 历史记录 ---------------- */
 
 const HISTORY_KEY = "fzt_history_v1";
 const HISTORY_LIMIT = 500;
@@ -1575,7 +1279,6 @@ function loadHistory() {
     const raw = localStorage.getItem(HISTORY_KEY);
     const list = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(list)) return [];
-    // 清理历史遗留的空壳记录（起局但从没发过消息就关闭/刷新页面留下的僵尸）
     const cleaned = list.filter((e) => e && Array.isArray(e.messages) && e.messages.length > 0);
     if (cleaned.length !== list.length) saveHistory(cleaned);
     return cleaned;
@@ -1583,7 +1286,7 @@ function loadHistory() {
     return [];
   }
 }
-// 返回 {ok, shrunk}：ok=是否成功写入（哪怕是缩减后的版本）；shrunk=是否因为空间不足丢弃了部分旧记录
+
 function saveHistory(list) {
   const originalLength = list.length;
   let arr = list.slice(0, HISTORY_LIMIT);
@@ -1598,12 +1301,13 @@ function saveHistory(list) {
   }
   return { ok: false, shrunk: true };
 }
+
 function fmtHistoryTime(ts) {
   const d = new Date(ts);
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-// 按体系生成历史列表里的一行简介
+
 function castSummaryFor(systemId, cast) {
   if (!cast) return "";
   switch (systemId) {
@@ -1626,67 +1330,66 @@ function castSummaryFor(systemId, cast) {
   }
 }
 
+// 辅助清洗函数：强行抹掉文本中所有的 * 字符，避免显示为加粗或星号
+function removeAsterisks(text) {
+  if (typeof text !== "string") return text;
+  return text.replace(/\*/g, "");
+}
+
 /* ---------------- 主组件 ---------------- */
 
 function AppInner() {
-  const [entered, setEntered] = useState(false); // 开场八卦画面 → 点击进入
-  const [learnMode, setLearnMode] = useState(false); // 学习模式（AI问答式教学）
+  const [entered, setEntered] = useState(false);
+  const [learnMode, setLearnMode] = useState(false);
   const [selected, setSelected] = useState(null);
   const [numbers, setNumbers] = useState("");
-  const [tarotSpread, setTarotSpread] = useState("overall"); // 牌阵key
-  const [tarotDrawMode, setTarotDrawMode] = useState("random"); // random | numbers
-  const [tarotNumbers, setTarotNumbers] = useState(""); // 报数字起牌
-  const [liurenMode, setLiurenMode] = useState("time"); // time时间起课 | numbers报数起课
-  const [liurenNumbers, setLiurenNumbers] = useState(""); // 报数起课：只需一个数字（代入「日」，月/时辰仍按当下真实农历）
+  const [tarotSpread, setTarotSpread] = useState("overall");
+  const [tarotDrawMode, setTarotDrawMode] = useState("random");
+  const [tarotNumbers, setTarotNumbers] = useState("");
+  const [liurenMode, setLiurenMode] = useState("time");
+  const [liurenNumbers, setLiurenNumbers] = useState("");
+
+  // 字体调节：std(14/15), md(16/17), lg(18/19), xl(20/21)
+  const [fontSizeKey, setFontSizeKey] = useState("md");
 
   // 八字资料
-  const [baziCalendar, setBaziCalendar] = useState("solar"); // solar新历 | lunar农历
+  const [baziCalendar, setBaziCalendar] = useState("solar");
   const [baziYear, setBaziYear] = useState("");
   const [baziMonth, setBaziMonth] = useState("");
   const [baziDay, setBaziDay] = useState("");
   const [baziLeapMonth, setBaziLeapMonth] = useState(false);
   const [baziHour, setBaziHour] = useState("");
-  const [baziMinute, setBaziMinute] = useState("0"); // 默认0分，和下拉框首个选项对齐
+  const [baziMinute, setBaziMinute] = useState("0");
   const [baziHourUnknown, setBaziHourUnknown] = useState(false);
-  const [baziGender, setBaziGender] = useState(""); // male | female | ""(未知)
+  const [baziGender, setBaziGender] = useState("");
   const [baziBirthPlace, setBaziBirthPlace] = useState("");
   const [baziCurrentPlace, setBaziCurrentPlace] = useState("");
-  // 时辰倒推定盘（出生时间不确定时的辅助向导）
-  const [shichenOpen, setShichenOpen] = useState(false);
-  const [shichenGroupKey, setShichenGroupKey] = useState(""); // 初筛选中的地支组
-  const [shichenFinalHour, setShichenFinalHour] = useState(""); // 最终选定的候选时辰（地支）
 
-  // 对话式状态
-  const [phase, setPhase] = useState("home"); // home | setup | chat  （setup 仅八字/小六壬需要）
-  const [castContext, setCastContext] = useState(""); // 本局盘面背景（作为system一部分）
-  const [castInfo, setCastInfo] = useState(null); // 用于顶部展示算法排盘
-  const [messages, setMessages] = useState([]); // [{role:'user'|'assistant', content}]
+  const [phase, setPhase] = useState("home");
+  const [castContext, setCastContext] = useState("");
+  const [castInfo, setCastInfo] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [pendingImage, setPendingImage] = useState(null); // {dataUrl, mediaType, data}
+  const [pendingImage, setPendingImage] = useState(null);
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const chatEndRef = useRef(null);
 
-  // 历史记录（本地存储）
   const [historyList, setHistoryList] = useState(loadHistory);
-  const [showHistory, setShowHistory] = useState(false); // 左侧历史抽屉
-  const currentHistoryRef = useRef(null); // 当前这一局对应的历史记录条目（不含最新messages，发消息时再补上）
+  const [showHistory, setShowHistory] = useState(false);
+  const currentHistoryRef = useRef(null);
 
   function upsertHistory(entry) {
     let saveResult = null;
     setHistoryList((prev) => {
       const idx = prev.findIndex((e) => e.id === entry.id);
       const next = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [entry, ...prev];
-      // 一条消息都还没发的空壳不落盘：这样用户中途关标签页/刷新也不会在本地留下僵尸记录
-      // （仍然更新内存里的 historyList，本次会话内「历史记录」列表照常能看到这一局）
       if (entry.messages.length > 0) saveResult = saveHistory(next);
       return next;
     });
-    if (saveResult && saveResult.shrunk) {
-      setError(saveResult.ok ? "提示：本机存储空间不够，已自动清理了一些旧的历史记录" : "历史记录存储已满，这一条没能保存下来");
-    }
   }
+
   function deleteHistoryEntry(id) {
     setHistoryList((prev) => {
       const next = prev.filter((e) => e.id !== id);
@@ -1694,7 +1397,7 @@ function AppInner() {
       return next;
     });
   }
-  // 从历史点进去继续对话：恢复盘面、上下文、消息，回到对话页
+
   function resumeHistory(h) {
     if (loading) return;
     abandonEmptyHistoryEntry();
@@ -1712,12 +1415,12 @@ function AppInner() {
     setMessages(Array.isArray(h.messages) ? h.messages : []);
     setError("");
     setInput("");
-    if (typeof setPendingImage === "function") setPendingImage(null);
+    setPendingImage(null);
     currentHistoryRef.current = { ...h };
     setPhase("chat");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  // 离开/重置当前这一局时，如果它还是个从没发过消息的空壳（messages为空），顺手删掉，不留僵尸记录
+
   function abandonEmptyHistoryEntry() {
     const cur = currentHistoryRef.current;
     if (cur && cur.messages.length === 0) {
@@ -1725,15 +1428,9 @@ function AppInner() {
     }
     currentHistoryRef.current = null;
   }
-  function clearAllHistory() {
-    setHistoryList([]);
-    saveHistory([]);
-  }
 
-  // 需要先填资料/选项的体系
   const NEEDS_SETUP = { bazi: true, liuren: true, tarot: true, meihua: true };
 
-  // 进入学习模式：清空对话，用教学提示开场
   function enterLearnMode() {
     if (loading) return;
     abandonEmptyHistoryEntry();
@@ -1741,12 +1438,11 @@ function AppInner() {
     setSelected(null);
     setCastContext("");
     setCastInfo(null);
-    const greeting = { role: "assistant", content: "来啦～我可以教你八字、小六壬、奇门、梅花、六爻、塔罗这些。你想先学哪一个？如果还没头绪，我建议从八字入门（先认十天干、十二地支和五行），要从这儿开始吗？" };
+    const greeting = { role: "assistant", content: "来啦～我可以教你八字、小六壬、奇门、梅花、六爻、塔罗这些。你想先学哪一个？如果还没头绪，我建议从八字入门，要从这儿开始吗？" };
     setMessages([greeting]);
     setInput("");
     setError("");
     setPhase("chat");
-    // 学习模式也建一条历史记录（点进历史能继续学）
     const hid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const historyEntry = {
       id: hid,
@@ -1755,14 +1451,14 @@ function AppInner() {
       isLearn: true,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      castSummary: "学习模式 · 跟AI老师学术数",
+      castSummary: "跟AI老师学术数",
       castInfo: null,
       castContext: "",
       messages: [],
     };
     currentHistoryRef.current = historyEntry;
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
   function exitLearnMode() {
     abandonEmptyHistoryEntry();
     setLearnMode(false);
@@ -1771,9 +1467,9 @@ function AppInner() {
   }
 
   function resetForm(id) {
-    if (loading) return; // AI 正在回复时不允许切走，避免旧请求返回后把回复错接到新的一局上
+    if (loading) return;
     abandonEmptyHistoryEntry();
-    setLearnMode(false); // 学习模式仅限术数课堂：一旦选体系就退出学习
+    setLearnMode(false);
     setSelected(id);
     setNumbers("");
     setTarotSpread("overall");
@@ -1792,9 +1488,6 @@ function AppInner() {
     setBaziGender("");
     setBaziBirthPlace("");
     setBaziCurrentPlace("");
-    setShichenOpen(false);
-    setShichenGroupKey("");
-    setShichenFinalHour("");
     setCastContext("");
     setCastInfo(null);
     setMessages([]);
@@ -1804,17 +1497,14 @@ function AppInner() {
     if (id == null) {
       setPhase("home");
     } else if (NEEDS_SETUP[id]) {
-      setPhase("setup"); // 先填资料/选项
+      setPhase("setup");
     } else if (id === "qimen" || id === "liuyao") {
-      // 奇门/六爻：不立即起局，先进对话，等用户发第一句话（问出具体的事）再起盘/摇卦
       setPhase("chat");
     } else {
       startCast(id, {});
     }
   }
 
-  // 起局：算出盘面，生成背景，进入对话阶段
-  // 起局失败时（比如出生日期不合法）统一在这里兜底，不让异常穿透到事件处理函数外层
   function startCast(id, opts) {
     try {
       return doStartCast(id, opts);
@@ -1848,14 +1538,12 @@ function AppInner() {
       const p = baziResult.pillars;
       cast = { type: "bazi", baziResult, text: `${p.year} ${p.month} ${p.day} ${p.hour || "未知"}` };
     } else if (id === "liuren") {
-      // 月与时辰始终按当下中国时间真实换算（避免用户自填农历对不上）；
-      // 「报数起课」时只需报一个数字，作为「日」的替代（民间掐指速断常见做法：随口报一数配合当下时辰）
       const lu = getChinaLunarNow();
       const lm = lu.lunarMonth;
       let ld, isReportedDay;
       if (opts.liurenMode === "numbers") {
         const ns = parsePositiveInts(opts.liurenNumbers);
-        if (!ns.length) throw new Error("报数起课要报一个数字，不是文字哈，请重新输入");
+        if (!ns.length) throw new Error("报数起课要报一个数字，不是文字哈");
         ld = ns[0];
         isReportedDay = true;
       } else {
@@ -1873,7 +1561,7 @@ function AppInner() {
       extra.info = info;
       extra.pan = pan;
       extra.isReportedDay = isReportedDay;
-      extra.mode = isReportedDay ? "报数起课（随口报一数代入「日」，月与时辰仍按当下农历真实换算）" : "时间起课（按当下中国时间自动取农历月、日、时辰）";
+      extra.mode = isReportedDay ? "报数起课" : "时间起课";
       cast = { type: "liuren", palace, hourNum, info, pan, mode: extra.mode, lunarMonth: lm, lunarDay: ld, isReportedDay };
     } else if (id === "meihua") {
       const mh = computeMeihua(opts.numbers || numbers, now);
@@ -1915,7 +1603,6 @@ function AppInner() {
       setPhase("chat");
     }
 
-    // 记入本地历史（新起一局＝新建一条历史记录）
     const hid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const historyEntry = {
       id: hid,
@@ -1934,35 +1621,14 @@ function AppInner() {
     return ctx;
   }
 
-  // 提交 setup（八字/小六壬）资料
   function handleSetupSubmit() {
     if (selected === "bazi" && (!baziYear || !baziMonth || !baziDay)) {
       setError("先把出生年、月、日填完整哈");
       return;
     }
     if (selected === "bazi" && baziGender !== "male" && baziGender !== "female") {
-      setError("请先选择性别（男/女）——大运顺逆排要用");
+      setError("请先选择性别（男/女）");
       return;
-    }
-    if (selected === "bazi" && !baziHourUnknown && baziHour === "") {
-      setError("填一下出生时间，不清楚的话勾选「不确定具体时间」即可");
-      return;
-    }
-    if (selected === "liuren" && liurenMode === "numbers" && !parsePositiveInts(liurenNumbers).length) {
-      setError("报数起课要报一个数字，不是文字哈");
-      return;
-    }
-    if (selected === "meihua" && numbers.trim() && parsePositiveInts(numbers).length < 2) {
-      setError("起卦数字要填两个以上有效数字，比如「7 12」；不确定就留空按时间起卦");
-      return;
-    }
-    if (selected === "tarot" && tarotDrawMode === "numbers") {
-      const need = TAROT_SPREADS[tarotSpread].positions.length;
-      const got = parsePositiveInts(tarotNumbers).length;
-      if (got < need) {
-        setError(`这个牌阵要${need}张牌，请报满${need}个数字（现在${got}个）`);
-        return;
-      }
     }
     startCast(selected, {
       baziCalendar, baziYear, baziMonth, baziDay, baziLeapMonth,
@@ -1973,45 +1639,38 @@ function AppInner() {
     });
   }
 
-  // 历史轮次里如果带过图片，发给API时用文字占位替换，只在"这一轮"真正带上完整图片数据——
-  // 否则每发一句话都要把之前所有轮次的原图 base64 重新整包发一遍，流量和token随对话轮数线性放大
   function stripOldImages(content) {
-    if (!Array.isArray(content)) return content;
+    if (!Array.isArray(content)) return removeAsterisks(content);
     const hadImage = content.some((b) => b.type === "image");
-    const text = content.filter((b) => b.type === "text").map((b) => b.text).join(" ");
+    const text = content.filter((b) => b.type === "text").map((b) => removeAsterisks(b.text)).join(" ");
     if (!hadImage) return text;
     return text ? `${text}　[之前发过一张图片]` : "[之前发过一张图片]";
   }
 
-  // 发送一条对话消息
   async function sendMessage(overrideText) {
-    const text = (typeof overrideText === "string" ? overrideText : input).trim();
+    const text = removeAsterisks((typeof overrideText === "string" ? overrideText : input).trim());
     if ((!text && !pendingImage) || loading) return;
     setError("");
     setInput("");
     const img = pendingImage;
     setPendingImage(null);
 
-    // 奇门遁甲/六爻：如果还没起盘（进页面没自动起），现在才按用户问出的这一刻起盘/摇卦
     let effectiveContext = castContext;
     if (!learnMode && (selected === "qimen" || selected === "liuyao") && !castContext) {
       effectiveContext = startCast(selected, { keepMessages: true });
       if (!effectiveContext) {
-        // startCast 内部已经 setError 了；把用户输入的内容还回去，不要吞掉
         setInput(text);
         setPendingImage(img);
         return;
       }
     }
 
-    // 发给API的消息：带图则用数组格式（Anthropic图片格式）
     const apiUserContent = img
       ? [
           ...(text ? [{ type: "text", text }] : [{ type: "text", text: "请结合这张图片和当前卦象，帮我看看。" }]),
           { type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } },
         ]
       : text;
-    // 存历史/显示用：图片存为可展示的标记
     const displayContent = img ? (text ? text + "　[图片]" : "[图片]") : text;
 
     const apiMessages = [
@@ -2042,7 +1701,10 @@ function AppInner() {
       if (!response.ok || data.error) {
         throw new Error(data.error || `HTTP ${response.status}`);
       }
-      const finalMessages = [...nextMessages, { role: "assistant", content: data.text || "（这一卦一时看不真切，换个说法再问问？）" }];
+
+      // 洗掉所有返回文本里的 * 符号
+      const cleanReply = removeAsterisks(data.text || "（这一卦一时看不真切，换个说法再问问？）");
+      const finalMessages = [...nextMessages, { role: "assistant", content: cleanReply }];
       setMessages(finalMessages);
       persistMessages(finalMessages);
     } catch (e) {
@@ -2053,24 +1715,18 @@ function AppInner() {
     }
   }
 
-  // 选择图片 → 按最长边等比缩放 + 统一重编码为 JPEG（顺带解决 HEIC/AVIF 等格式不兼容问题，
-  // 也把体积压下来，避免占爆 localStorage、拖慢每轮对话请求）
   function handlePickImage(e) {
     const file = e.target.files && e.target.files[0];
     e.target.value = "";
     if (!file) return;
     if (!/^image\//.test(file.type)) { setError("请选择图片文件"); return; }
-    if (file.size > IMAGE_MAX_RAW_MB * 1024 * 1024) {
-      setError(`图片太大了（超过 ${IMAGE_MAX_RAW_MB}MB），换一张小一点的试试`);
-      return;
-    }
     const reader = new FileReader();
     reader.onload = () => {
       const imgEl = new Image();
       imgEl.onload = () => {
         let { width, height } = imgEl;
-        if (width > IMAGE_MAX_DIMENSION || height > IMAGE_MAX_DIMENSION) {
-          const scale = IMAGE_MAX_DIMENSION / Math.max(width, height);
+        if (width > 1280 || height > 1280) {
+          const scale = 1280 / Math.max(width, height);
           width = Math.round(width * scale);
           height = Math.round(height * scale);
         }
@@ -2079,28 +1735,16 @@ function AppInner() {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(imgEl, 0, 0, width, height);
-        let dataUrl;
-        try {
-          dataUrl = canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY);
-        } catch (err) {
-          setError("这张图片处理失败，换一张试试");
-          return;
-        }
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
         const comma = dataUrl.indexOf(",");
         const data = dataUrl.slice(comma + 1);
         setPendingImage({ dataUrl, mediaType: "image/jpeg", data });
       };
-      imgEl.onerror = () => setError("这张图片打不开，可能是苹果HEIC等特殊格式，换成JPG/PNG格式试试");
       imgEl.src = reader.result;
     };
-    reader.onerror = () => setError("图片读取失败，换一张试试");
     reader.readAsDataURL(file);
   }
 
-  // 把最新的对话消息写回本地历史记录
-  // 写盘前只保留"最新一张"图片的原图数据，更早轮次的图片去掉 img 字段——
-  // 历史记录查看面板本来就只展示文字（不渲染缩略图，见下方 h.messages.map），
-  // 多轮贴图会让单条记录体积线性增长、拖垮 localStorage 配额，而这些旧图数据其实从没被用到过
   function persistMessages(msgs) {
     if (!currentHistoryRef.current) return;
     const lastImgIdx = msgs.reduce((acc, m, i) => (m.img ? i : acc), -1);
@@ -2111,225 +1755,57 @@ function AppInner() {
 
   const currentSystem = SYSTEMS.find((s) => s.id === selected);
 
-  // 算法排盘：按体系生成「数据行」（Space Mono 数据感）
-  function castRows() {
-    const c = castInfo;
-    if (!c) return null;
-    const row = (k, v, key) => (
-      <div className="datarow" key={key}>
-        <div className="dk">{k}</div>
-        <div className="dv">{v}</div>
-      </div>
-    );
-    if (c.type === "liuyao") {
-      return (
-        <>
-          {row("摇卦记录", c.raw.map((l) => l.label).join(" · "), "r1")}
-          <div className="datarow">
-            <div className="dk">卦爻</div>
-            <div className="dv"><MiniHex raw={c.raw} /></div>
-          </div>
-          {row("本卦", <><span className="ser">{c.ben.name}</span>（上{c.ben.upper} 下{c.ben.lower}）</>, "r3")}
-          {row("动爻", c.movingPositions.length ? `第 ${c.movingPositions.join("、")} 爻 · 变卦 ${c.bian.name}` : "六爻皆静 · 无变卦", "r4")}
-          {c.sy && row("世应", `世在 ${c.sy.shi} 爻 · 应在 ${c.sy.ying} 爻 · 主近宾远`, "r5")}
-        </>
-      );
-    }
-    if (c.type === "meihua") {
-      return (
-        <>
-          {row("起卦方式", c.method, "m0")}
-          {row("本卦", <><span className="ser">{c.ben.name}</span>（上{c.upperName} 下{c.lowerName}）</>, "m1")}
-          {row("动爻", `第 ${c.movePos} 爻`, "m2")}
-          {row("互卦", c.hu.name, "m3")}
-          {row("变卦", c.bian.name, "m4")}
-          {row("体 / 用", `体 ${c.ti.name}(${c.ti.element}) · 用 ${c.yong.name}(${c.yong.element})`, "m5")}
-        </>
-      );
-    }
-    if (c.type === "bazi") {
-      const r = c.baziResult;
-      const p = r.pillars;
-      const fmtDayun = (yun) => yun.list.slice(0, 6).map((d) =>
-        d.index === 0 ? `起运前` : `${d.ganzhi}(${d.startAge}-${d.endAge}岁)`
-      ).join(" · ");
-      return (
-        <>
-          {row("年柱", <span className="ser">{p.year}</span>, "b1")}
-          {row("月柱", <span className="ser">{p.month}</span>, "b2")}
-          {row("日柱", <span className="ser">{p.day}</span>, "b3")}
-          {row("时柱", p.hour ? <span className="ser">{p.hour}</span> : "未知（时间不确定）", "b4")}
-          {row("农历", r.lunarText, "b5")}
-          {r.dayun.unknownGender ? (
-            <>
-              {row("大运（按男命）", fmtDayun(r.dayun.male), "b6m")}
-              {row("大运（按女命）", fmtDayun(r.dayun.female), "b6f")}
-            </>
-          ) : (
-            row(`大运（${r.dayun.forward ? "顺排" : "逆排"}）`, fmtDayun(r.dayun), "b6")
-          )}
-        </>
-      );
-    }
-    if (c.type === "liuren") {
-      const info = c.info || {};
-      const pan = c.pan;
-      // 展示顺序仿传统盘：上排 留连 速喜 赤口，下排 大安 空亡 小吉
-      const order = ["留连", "速喜", "赤口", "大安", "空亡", "小吉"];
-      const byName = {};
-      (pan || []).forEach((p) => { byName[p.name] = p; });
-      const wxColor = { 木: "#7BA05B", 火: "#C0504D", 土: "#8B6F47", 金: "#C9A227", 水: "#4A7BA6" };
-      return (
-        <>
-          {row("起课", c.mode, "l3")}
-          {row("自身落宫", <span className="ser">{c.palace}</span>, "l1")}
-          {c.lunarMonth && row(c.isReportedDay ? "月 / 报数" : "农历", `${c.lunarMonth} 月 ${c.lunarDay} ${c.isReportedDay ? "（报数）" : "日"} · 第${c.hourNum}时辰`, "l4")}
-          {pan && (
-            <div className="lr-grid">
-              {order.map((nm) => {
-                const p = byName[nm];
-                if (!p) return null;
-                return (
-                  <div className={"lr-cell" + (p.isSelf ? " self" : "")} key={nm}>
-                    <div className="lr-top">
-                      <span className="lr-god">{p.god}</span>
-                      <span className="lr-star">{p.star}</span>
-                    </div>
-                    <div className="lr-gz">{p.branch}<em>({p.branchWx})</em></div>
-                    <div className="lr-qin">{p.qin}{p.isSelf ? "·自身" : p.isDay ? "·日" : ""}</div>
-                    <div className="lr-name">{p.name}</div>
-                    <div className="lr-wx" style={{ background: wxColor[p.palaceWx] || "#8B6F47" }}>{p.palaceWx}</div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      );
-    }
-    if (c.type === "qimen") {
-      // 洛书九宫布局：巽4 离9 坤2 / 震3 中5 兑7 / 艮8 坎1 乾6
-      const layout = [4, 9, 2, 3, 5, 7, 8, 1, 6];
-      const fp = c.fullPan || {};
-      return (
-        <>
-          {row("定局", `${c.period} · ${c.yuanName} · ${c.dunType}${c.ju}局`, "q1")}
-          {row("值符", `${c.zhiFuStar} 临 ${PALACE_NAMES[c.zhiFuGong]}宫`, "q2")}
-          {row("值使", `${c.zhiShiDoor} 行至 ${PALACE_NAMES[c.zhiShiGong]}宫`, "q3")}
-          {c.fullPan && (
-            <div className="qm-grid">
-              {layout.map((g) => {
-                const cell = fp[g] || {};
-                if (g === 5) {
-                  return (
-                    <div className="qm-cell qm-center" key={g}>
-                      <div className="qm-digit">五</div>
-                      <div className="qm-di">{cell.diStem}</div>
-                      <div className="qm-name">中宫</div>
-                    </div>
-                  );
-                }
-                return (
-                  <div className={"qm-cell" + (cell.isZhiFu ? " zhifu" : "") + (cell.isZhiShi ? " zhishi" : "")} key={g}>
-                    <div className="qm-god">{cell.god}{cell.isZhiFu && "·符"}{cell.isZhiShi && "·使"}</div>
-                    <div className="qm-row1"><span className="qm-star">{cell.star}</span><span className="qm-door">{cell.door}</span></div>
-                    <div className="qm-gan"><span className="qm-tian">{cell.tianStem}</span><span className="qm-slash">/</span><span className="qm-di">{cell.diStem}</span></div>
-                    <div className="qm-row3"><span className="qm-name">{cell.name}{g}宫</span><span className="qm-wx">{cell.wx}</span></div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      );
-    }
-    if (c.type === "tarot") {
-      return (
-        <>
-          {c.spreadLabel && row("牌阵", c.spreadLabel, "ts")}
-          {c.cards.map((card, i) =>
-            row(
-              c.positions[i] || `第 ${i + 1} 张`,
-              <span><span className="ser">{card.card}</span>（{card.reversed ? "逆位" : "正位"}）</span>,
-              "t" + i
-            )
-          )}
-        </>
-      );
-    }
-    return null;
-  }
+  // 根据字号状态映射根字体与对话字体
+  const fontSizes = {
+    std: { base: "14px", bubble: "15px" },
+    md: { base: "16px", bubble: "17px" },
+    lg: { base: "18px", bubble: "19px" },
+    xl: { base: "20px", bubble: "21px" },
+  };
+  const curSize = fontSizes[fontSizeKey] || fontSizes.md;
 
   return (
-    <div className="page">
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');`}</style>
+    <div className="page" style={{ "--base-size": curSize.base, "--bubble-size": curSize.bubble }}>
       <style>{DESIGN_CSS}</style>
+
+      {/* 固定右上角字号调节面板 */}
+      <div className="font-toggle-bar">
+        <span className="font-toggle-label">字号:</span>
+        <button className={"font-btn" + (fontSizeKey === "std" ? " on" : "")} onClick={() => setFontSizeKey("std")}>小</button>
+        <button className={"font-btn" + (fontSizeKey === "md" ? " on" : "")} onClick={() => setFontSizeKey("md")}>中</button>
+        <button className={"font-btn" + (fontSizeKey === "lg" ? " on" : "")} onClick={() => setFontSizeKey("lg")}>大</button>
+        <button className={"font-btn" + (fontSizeKey === "xl" ? " on" : "")} onClick={() => setFontSizeKey("xl")}>特大</button>
+      </div>
 
       {!entered && (
         <div className="intro-screen" onClick={() => setEntered(true)}>
           <div className="intro-inner">
-            <svg className="intro-bagua" viewBox="0 0 200 200" width="230" height="230">
-              {/* 八卦八个卦象，环绕 */}
-              <g className="intro-tri">
-                {[
-                  { a: 0, lines: [1, 1, 1] },   // 乾
-                  { a: 45, lines: [1, 1, 0] },
-                  { a: 90, lines: [0, 1, 0] },
-                  { a: 135, lines: [0, 0, 0] }, // 坤
-                  { a: 180, lines: [0, 0, 1] },
-                  { a: 225, lines: [1, 0, 1] },
-                  { a: 270, lines: [1, 0, 0] },
-                  { a: 315, lines: [0, 1, 1] },
-                ].map((t, i) => (
-                  <g key={i} transform={`rotate(${t.a} 100 100)`}>
-                    {t.lines.map((ln, j) => (
-                      ln === 1 ? (
-                        <rect key={j} x="90" y={4 + j * 7} width="20" height="4" rx="1" fill="#C9A15A" />
-                      ) : (
-                        <g key={j}>
-                          <rect x="90" y={4 + j * 7} width="8" height="4" rx="1" fill="#C9A15A" />
-                          <rect x="102" y={4 + j * 7} width="8" height="4" rx="1" fill="#C9A15A" />
-                        </g>
-                      )
-                    ))}
-                  </g>
-                ))}
-              </g>
-              {/* 太极图 */}
-              <g className="intro-taiji">
-                <circle cx="100" cy="100" r="46" fill="#0E0B08" stroke="#C9A15A" strokeWidth="1.5" />
-                <path d="M100 54 a23 23 0 0 1 0 46 a23 23 0 0 0 0 46 a46 46 0 0 1 0 -92 Z" fill="#E4C989" />
-                <circle cx="100" cy="77" r="7" fill="#0E0B08" />
-                <circle cx="100" cy="123" r="7" fill="#E4C989" />
-              </g>
-            </svg>
             <div className="intro-title">富甲天下</div>
             <div className="intro-sub">AI · 多体系术数问答</div>
-            <div className="intro-hint">轻触太极 · 入局</div>
+            <div className="intro-hint">轻触页面 · 入局</div>
           </div>
         </div>
       )}
 
       <div className="wrap">
-        {/* 左上角 ☰ —— 打开历史记录抽屉 */}
+        {/* 固定左上角历史抽屉开关 */}
         {entered && (
           <button className="hist-toggle" onClick={() => setShowHistory(true)} aria-label="历史记录">
             <span></span><span></span><span></span>
           </button>
         )}
 
-        {/* 左侧历史抽屉 */}
         {showHistory && (
           <>
             <div className="drawer-mask" onClick={() => setShowHistory(false)} />
             <aside className="drawer">
               <div className="drawer-head">
                 <span>历史记录</span>
-                <button className="drawer-x" onClick={() => setShowHistory(false)} aria-label="关闭">✕</button>
+                <button className="drawer-x" onClick={() => setShowHistory(false)}>✕</button>
               </div>
               <div className="drawer-sub">仅存本机 · 最多 {HISTORY_LIMIT} 条</div>
               {historyList.length === 0 ? (
-                <div className="drawer-empty">还没有记录。起局问卜或进课堂学习后，会自动存在这里。</div>
+                <div className="drawer-empty">还没有记录。起局问卜后，会自动存在这里。</div>
               ) : (
                 <div className="drawer-list">
                   {historyList.map((h) => (
@@ -2339,294 +1815,103 @@ function AppInner() {
                         <div className="drawer-item-sum">{h.castSummary}</div>
                         <div className="drawer-item-time">{fmtHistoryTime(h.updatedAt)} · {h.messages.length} 条</div>
                       </button>
-                      <button className="drawer-item-del" onClick={() => deleteHistoryEntry(h.id)} aria-label="删除">✕</button>
+                      <button className="drawer-item-del" onClick={() => deleteHistoryEntry(h.id)}>✕</button>
                     </div>
                   ))}
                 </div>
-              )}
-              {historyList.length > 0 && (
-                <button className="drawer-clear" onClick={() => { if (window.confirm("确定清空全部历史记录吗？不可恢复。")) { clearAllHistory(); } }}>清空全部</button>
               )}
             </aside>
           </>
         )}
         <RunBar pos="top" />
 
-        {/* 首页：未选体系、非学习模式时显示 HERO + 列表 */}
         {!selected && !learnMode && (
-        <>
-        {/* HERO */}
-        <header className="hero">
-          <div className="hero-grid">
-            <div>
-              <Kicker onDark code="CODEX" label="六体通书 · 起局 & 解读" />
-              <h1>富甲天下</h1>
-              <p className="hero-sub">AI · 多体系术数问答。起局、排盘、成卦全由确定性算法在前端精算，AI 只作文字解读，同一局面复算稳定。</p>
-              <div className="htags">
-                {SYSTEMS.map((s) => <span className="htag" key={s.id}>{s.name}</span>)}
+          <>
+            <header className="hero">
+              <div className="hero-grid">
+                <div>
+                  <Kicker onDark code="CODEX" label="六体通书 · 起局 & 解读" />
+                  <h1>富甲天下</h1>
+                  <p className="hero-sub">AI · 多体系术数问答。确定性算法精算，AI作文字解读。</p>
+                </div>
+                <div className="hero-wheel"><BaguaWheel /></div>
               </div>
-              <div className="hero-meta">
-                <div className="hmeta"><div className="k">Systems</div><div className="v">06 体系</div></div>
-                <div className="hmeta"><div className="k">Engine</div><div className="v">Deterministic</div></div>
-                <div className="hmeta"><div className="k">Edition</div><div className="v">WB-2026</div></div>
-                <div className="hmeta"><div className="k">Active</div><div className="v">择体 · SELECT</div></div>
+            </header>
+
+            <section className="section">
+              <div className="sec-head">
+                <Kicker code="CHAPTER 01" label="择体 · 六大体系" />
+                <h2>六体系索引 · 择一而问</h2>
               </div>
-            </div>
-            <div className="hero-wheel"><BaguaWheel /></div>
-          </div>
-        </header>
+              <div className="sys-grid">
+                {SYSTEMS.map((s, i) => (
+                  <button key={s.id} className="sys" onClick={() => resetForm(s.id)}>
+                    <div className="no">{String(i + 1).padStart(2, "0")}</div>
+                    <div className="sym">{s.glyph}</div>
+                    <div className="nm">{s.name}</div>
+                    <div className="st">{s.sub}</div>
+                    <div className="pick">点选起局 →</div>
+                  </button>
+                ))}
+              </div>
+            </section>
 
-        {/* CHAPTER 01 · 择体系 */}
-        <section className="section">
-          <div className="sec-head">
-            <Kicker code="CHAPTER 01" label="择体 · 六大体系" />
-            <h2>六体系索引 · 择一而问</h2>
-            <p className="lead">六套术数各有所长，起局方式、擅答之事皆异。下表为目录式索引，点选其一即可起局问卜。</p>
-          </div>
-          <div className="sys-grid">
-            {SYSTEMS.map((s, i) => {
-              return (
-                <button key={s.id} className="sys" onClick={() => resetForm(s.id)}>
-                  <div className="no">{String(i + 1).padStart(2, "0")}</div>
-                  <div className="sym">{s.glyph}</div>
-                  <div className="nm">{s.name}</div>
-                  <div className="st">{s.sub}</div>
-                  <div className="pick">点选起局 →</div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 术数课堂 · 单独一栏 */}
-        <section className="section">
-          <div className="sec-head">
-            <Kicker code="CHAPTER 02" label="研习 · 术数课堂" />
-          </div>
-          <button className="learn-row" onClick={enterLearnMode}>
-            <div className="learn-row-glyph">學</div>
-            <div className="learn-row-body">
-              <div className="learn-row-title">术数课堂</div>
-              <div className="learn-row-sub">跟 AI 老师一对一学八字、小六壬、奇门、梅花、六爻、塔罗，从零入门</div>
-            </div>
-            <div className="learn-row-go">进入课堂 →</div>
-          </button>
-        </section>
-
-        </>
+            <section className="section">
+              <button className="learn-row" onClick={enterLearnMode}>
+                <div className="learn-row-glyph">學</div>
+                <div className="learn-row-body">
+                  <div className="learn-row-title">术数课堂</div>
+                  <div className="learn-row-sub">跟 AI 老师一对一学八字、小六壬、奇门等，从零入门</div>
+                </div>
+                <div className="learn-row-go">进入课堂 →</div>
+              </button>
+            </section>
+          </>
         )}
 
-        {/* 详情页：选中体系后显示返回按钮 */}
-        {/* 详情页顶部返回栏 */}
         {(selected || learnMode) && (
           <div className="backbar">
-            <button className="backbtn" disabled={loading} title={loading ? "AI 正在回复，请等它说完再离开" : undefined} onClick={() => (learnMode ? exitLearnMode() : resetForm(null))}>← 返回{learnMode ? " · 退出学习" : " · 重新择体"}</button>
-            {!learnMode && phase === "chat" && NEEDS_SETUP[selected] && (
-              <button
-                className="backbtn"
-                style={{ marginLeft: 10 }}
-                disabled={loading}
-                title={loading ? "AI 正在回复，请等它说完再修改资料" : undefined}
-                onClick={() => {
-                  if (loading) return; // 请求还没回来就不让改，避免旧回复串到新的一局里
-                  abandonEmptyHistoryEntry();
-                  setPhase("setup");
-                  setMessages([]);
-                  setCastContext("");
-                  setCastInfo(null);
-                  setError("");
-                  setInput("");
-                }}
-              >✎ 修改资料</button>
-            )}
-            {!learnMode && phase === "chat" && (
-              <button className="backbtn" style={{ marginLeft: 10 }} disabled={loading} title={loading ? "AI 正在回复，请等它说完再重新起局" : undefined} onClick={() => resetForm(selected)}>↻ 重新起局</button>
-            )}
+            <button className="backbtn" disabled={loading} onClick={() => (learnMode ? exitLearnMode() : resetForm(null))}>← 返回{learnMode ? " · 退出学习" : " · 重新择体"}</button>
           </div>
         )}
 
-        {/* SETUP · 八字/小六壬 先填资料 */}
         {selected && phase === "setup" && (
           <section className="section">
             <div className="sec-head">
               <Kicker code="STEP 01" label={`填资料 · ${LATIN[selected]}`} />
-              <h2>{currentSystem.name} · 先填一点信息</h2>
+              <h2>{currentSystem.name} · 先填信息</h2>
             </div>
             <div className="form-card">
               <div className="fgrid">
                 <div>
-                  {selected === "bazi" && (() => {
-                    const thisYear = new Date().getFullYear();
-                    const yearOptions = Array.from({ length: thisYear - 1900 + 1 }, (_, i) => thisYear - i);
-                    const leapMonthOfYear = baziCalendar === "lunar" && baziYear ? getLunarLeapMonth(baziYear) : 0;
-
-                    // 月份下拉：农历模式下，当年有闰月的那个月额外多一个"闰X月"选项；用 "L5" 这种编码表示闰5月
-                    const monthOptions = [];
-                    for (let m = 1; m <= 12; m++) {
-                      monthOptions.push({ value: String(m), label: `${m}月` });
-                      if (baziCalendar === "lunar" && m === leapMonthOfYear) {
-                        monthOptions.push({ value: `L${m}`, label: `闰${m}月` });
-                      }
-                    }
-                    const monthValue = baziMonth ? `${baziLeapMonth ? "L" : ""}${baziMonth}` : "";
-                    function handleMonthChange(v) {
-                      const isLeap = v.startsWith("L");
-                      const m = isLeap ? v.slice(1) : v;
-                      setBaziMonth(m);
-                      setBaziLeapMonth(isLeap);
-                      const max = baziCalendar === "lunar" ? daysInLunarMonth(baziYear, m, isLeap) : daysInSolarMonth(baziYear, m);
-                      if (max > 0 && Number(baziDay) > max) setBaziDay(String(max));
-                    }
-                    function handleYearChange(y) {
-                      setBaziYear(y);
-                      if (baziMonth) {
-                        const stillLeap = baziCalendar === "lunar" && baziLeapMonth && getLunarLeapMonth(y) === Number(baziMonth);
-                        if (baziCalendar === "lunar" && baziLeapMonth && !stillLeap) setBaziLeapMonth(false); // 换年后闰月不存在了，自动退回普通月
-                        const max = baziCalendar === "lunar" ? daysInLunarMonth(y, baziMonth, stillLeap) : daysInSolarMonth(y, baziMonth);
-                        if (max > 0 && Number(baziDay) > max) setBaziDay(String(max));
-                      }
-                    }
-                    const maxDay = baziYear && baziMonth
-                      ? (baziCalendar === "lunar" ? daysInLunarMonth(baziYear, baziMonth, baziLeapMonth) : daysInSolarMonth(baziYear, baziMonth))
-                      : 31;
-                    const dayOptions = Array.from({ length: Math.max(maxDay, 1) }, (_, i) => i + 1);
-
-                    return (
-                      <>
-                        <label className="flabel">历法</label>
-                        <div className="spread" style={{ marginBottom: 14 }}>
-                          <button type="button" className={baziCalendar === "solar" ? "on" : ""} onClick={() => { setBaziCalendar("solar"); setBaziLeapMonth(false); }}>新历（公历）</button>
-                          <button type="button" className={baziCalendar === "lunar" ? "on" : ""} onClick={() => setBaziCalendar("lunar")}>农历</button>
-                        </div>
-
-                        <label className="flabel">出生年 · 月 · 日</label>
-                        <div className="ymdrow" style={{ marginBottom: 14 }}>
-                          <select className="selbox" value={baziYear} onChange={(e) => handleYearChange(e.target.value)}>
-                            <option value="">年</option>
-                            {yearOptions.map((y) => <option key={y} value={y}>{y}年</option>)}
-                          </select>
-                          <select className="selbox" value={monthValue} onChange={(e) => handleMonthChange(e.target.value)}>
-                            <option value="">月</option>
-                            {monthOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                          <select className="selbox" value={baziDay} onChange={(e) => setBaziDay(e.target.value)}>
-                            <option value="">日</option>
-                            {dayOptions.map((d) => <option key={d} value={d}>{d}日</option>)}
-                          </select>
-                        </div>
-
-                        <label className="flabel">出生时间</label>
-                        <div className="frow" style={{ marginBottom: 10 }}>
-                          <select className="selbox" disabled={baziHourUnknown} value={baziHour} onChange={(e) => setBaziHour(e.target.value)}>
-                            <option value="">时</option>
-                            {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{h}时</option>)}
-                          </select>
-                          <select className="selbox" disabled={baziHourUnknown} value={baziMinute} onChange={(e) => setBaziMinute(e.target.value)}>
-                            {Array.from({ length: 60 }, (_, m) => <option key={m} value={m}>{m}分</option>)}
-                          </select>
-                        </div>
-                        <label className="checkline" style={{ marginBottom: 10 }}>
-                          <input type="checkbox" checked={baziHourUnknown} onChange={(e) => { setBaziHourUnknown(e.target.checked); if (!e.target.checked) setShichenOpen(false); }} />
-                          不确定具体出生时间
-                        </label>
-                        {baziHourUnknown && (
-                          <>
-                            <Callout tone="verm" label="提醒">时辰不确定，时柱与起运的具体年龄都只能算个大概、有偏差；下面「时辰倒推」能帮你缩小范围，但结果也不一定准，仅供参考。</Callout>
-                            <div className="btn-row" style={{ marginTop: 10, marginBottom: 14 }}>
-                              <button type="button" className="btn ghost" onClick={() => setShichenOpen((v) => !v)}>
-                                {shichenOpen ? "收起时辰倒推" : "帮我推算大概时辰 →"}
-                              </button>
-                            </div>
-                            {shichenOpen && (!baziYear || !baziMonth || !baziDay ? (
-                              <Callout tone="gold" label="先填年月日">时辰倒推需要先填好出生年、月、日，才能推算候选时辰的四柱与大运。</Callout>
-                            ) : (
-                              <ShichenWizard
-                                calendar={baziCalendar} year={baziYear} month={baziMonth} day={baziDay} isLeapMonth={baziLeapMonth}
-                                gender={baziGender} groupKey={shichenGroupKey}
-                                onPickGroup={(key) => setShichenGroupKey(key)}
-                                onBackToGroup={() => setShichenGroupKey("")}
-                                onConfirmHour={(branch, hour) => {
-                                  setShichenFinalHour(branch);
-                                  setBaziHour(String(hour));
-                                  setBaziMinute("0");
-                                  setBaziHourUnknown(false);
-                                  setShichenOpen(false);
-                                }}
-                              />
-                            ))}
-                          </>
-                        )}
-
-                        <label className="flabel">性别</label>
-                        <div className="spread c3" style={{ marginBottom: 14 }}>
-                          <button type="button" className={baziGender === "male" ? "on" : ""} onClick={() => setBaziGender("male")}>男</button>
-                          <button type="button" className={baziGender === "female" ? "on" : ""} onClick={() => setBaziGender("female")}>女</button>
-                        </div>
-                        {baziGender === "" && <Callout tone="jade" label="请选性别">大运顺排、逆排取决于性别，请先选择男或女。</Callout>}
-
-                        <label className="flabel" style={{ marginTop: 14 }}>出生地（选填）</label>
-                        <input className="fin" style={{ marginBottom: 12 }} type="text" value={baziBirthPlace} onChange={(e) => setBaziBirthPlace(e.target.value)} placeholder="如：广东广州" />
-                        <label className="flabel">现居地（选填）</label>
-                        <input className="fin" type="text" value={baziCurrentPlace} onChange={(e) => setBaziCurrentPlace(e.target.value)} placeholder="如：上海" />
-                      </>
-                    );
-                  })()}
-                  {selected === "liuren" && (
+                  {selected === "bazi" && (
                     <>
-                      <label className="flabel">起课方式</label>
+                      <label className="flabel">历法</label>
                       <div className="spread" style={{ marginBottom: 14 }}>
-                        <button type="button" className={liurenMode === "time" ? "on" : ""} onClick={() => setLiurenMode("time")}>时间起课（自动取农历）</button>
-                        <button type="button" className={liurenMode === "numbers" ? "on" : ""} onClick={() => setLiurenMode("numbers")}>报数起课</button>
+                        <button type="button" className={baziCalendar === "solar" ? "on" : ""} onClick={() => setBaziCalendar("solar")}>公历</button>
+                        <button type="button" className={baziCalendar === "lunar" ? "on" : ""} onClick={() => setBaziCalendar("lunar")}>农历</button>
                       </div>
-                      {liurenMode === "time" ? (
-                        <Callout tone="jade" label="时间起课">按中国时间自动换算成农历月、日，配合当前时辰掐指定局，你什么都不用填，直接开始问即可。</Callout>
-                      ) : (
-                        <>
-                          <label className="flabel">随口报一个数字</label>
-                          <input className="fin" type="text" value={liurenNumbers} onChange={(e) => setLiurenNumbers(e.target.value)} placeholder="例 18" />
-                          <Callout tone="jade" label="报数起课">心中默想所问之事，随口报一个数即可——月、时辰仍按当下农历真实换算，只有这个数会代入起课，不必再费心算农历。</Callout>
-                        </>
-                      )}
+                      <label className="flabel">出生年 · 月 · 日</label>
+                      <div className="ymdrow" style={{ marginBottom: 14 }}>
+                        <input className="fin" type="number" placeholder="年(1995)" value={baziYear} onChange={(e) => setBaziYear(e.target.value)} />
+                        <input className="fin" type="number" placeholder="月(8)" value={baziMonth} onChange={(e) => setBaziMonth(e.target.value)} />
+                        <input className="fin" type="number" placeholder="日(15)" value={baziDay} onChange={(e) => setBaziDay(e.target.value)} />
+                      </div>
+                      <label className="flabel">性别</label>
+                      <div className="spread" style={{ marginBottom: 14 }}>
+                        <button type="button" className={baziGender === "male" ? "on" : ""} onClick={() => setBaziGender("male")}>男</button>
+                        <button type="button" className={baziGender === "female" ? "on" : ""} onClick={() => setBaziGender("female")}>女</button>
+                      </div>
                     </>
                   )}
-                  {selected === "meihua" && (
-                    <>
-                      <label className="flabel">起卦数字（选填，两个以上数字）</label>
-                      <input className="fin" style={{ marginBottom: 12 }} type="text" value={numbers} onChange={(e) => setNumbers(e.target.value)} placeholder="例 7 12" />
-                      <Callout tone="jade" label="起卦法">首数定上卦、次数定下卦、诸数之和定动爻。留空则按当前时间起卦。</Callout>
-                    </>
+                  {selected === "liuren" && (
+                    <Callout tone="jade" label="时间起课">自动按当下时间排课，点击下方直接开始。</Callout>
                   )}
                   {selected === "tarot" && (
-                    <>
-                      <label className="flabel">选个牌阵</label>
-                      <select className="selbox" style={{ marginBottom: 8 }} value={tarotSpread} onChange={(e) => setTarotSpread(e.target.value)}>
-                        {Object.entries(
-                          Object.entries(TAROT_SPREADS).reduce((acc, [key, s]) => {
-                            (acc[s.group] = acc[s.group] || []).push([key, s]);
-                            return acc;
-                          }, {})
-                        ).map(([group, items]) => (
-                          <optgroup key={group} label={group}>
-                            {items.map(([key, s]) => <option key={key} value={key}>{s.label}</option>)}
-                          </optgroup>
-                        ))}
-                      </select>
-                      <div className="spread-positions">
-                        {TAROT_SPREADS[tarotSpread].positions.map((p, i) => <span className="pos-chip" key={i}>{i + 1}. {p}</span>)}
-                      </div>
-                      <label className="flabel">抽牌方式</label>
-                      <div className="spread" style={{ marginBottom: 12 }}>
-                        <button type="button" className={tarotDrawMode === "random" ? "on" : ""} onClick={() => setTarotDrawMode("random")}>随机抽牌</button>
-                        <button type="button" className={tarotDrawMode === "numbers" ? "on" : ""} onClick={() => setTarotDrawMode("numbers")}>报数字起牌</button>
-                      </div>
-                      {tarotDrawMode === "numbers" && (
-                        <>
-                          <label className="flabel">报几个数字（1-78，空格隔开，几张牌报几个数）</label>
-                          <input className="fin" type="text" value={tarotNumbers} onChange={(e) => setTarotNumbers(e.target.value)} placeholder="例 7 21 40" />
-                        </>
-                      )}
-                      <Callout tone="jade" label="抽牌">随机抽牌由程序随机；报数字起牌请在 1-78 之间各报一个数（对应78张牌），由数字决定抽到哪几张、正逆位。</Callout>
-                    </>
+                    <Callout tone="jade" label="塔罗问卜">已为你自动选好牌阵，点击下方直接开始。</Callout>
+                  )}
+                  {selected === "meihua" && (
+                    <Callout tone="jade" label="梅花易数">点击下方直接按当下时间起卦。</Callout>
                   )}
                 </div>
               </div>
@@ -2638,7 +1923,6 @@ function AppInner() {
           </section>
         )}
 
-        {/* CHAT · 对话界面 */}
         {(selected || learnMode) && phase === "chat" && (
           <section className="section">
             <div className="sec-head">
@@ -2646,41 +1930,16 @@ function AppInner() {
               <h2>{learnMode ? "术数课堂 · 随便问" : `${currentSystem.name} · 有什么想问的`}</h2>
             </div>
 
-            {/* 算法排盘（本局盘面，一直展示在对话上方） */}
-            {!learnMode && castInfo && (
-              <div className="castbar" style={{ marginBottom: 18 }}>
-                <div className="cb-head">
-                  <Kicker onDark code="CASTING LOG" label="本局排盘" />
-                  <span className="cb-code">{LATIN[selected]} · 复算稳定</span>
-                </div>
-                {castRows()}
-              </div>
-            )}
-
-            {/* 对话气泡区 */}
             <div className="chat">
-              {messages.length === 0 && !loading && (
-                <div className="chat-hint">
-                  {selected === "qimen" && "直接把想问的事说出来——你问的这一刻，会按当下的时间起盘，然后据此为你解读。"}
-                  {selected === "liuyao" && "六爻讲究「不问不卜」，先把想问的具体事情说出来——一提交就会摇钱起卦，据卦而断。"}
-                  {selected === "bazi" && (
-                    <div>
-                      <div style={{ marginBottom: 12 }}>盘已排好。点下面开始——我会先根据你的八字推算过去发生过的事（10条，供你核对准不准），再给出命盘报告，最后问你想深入看哪方面。</div>
-                      <button className="bazi-start-btn" disabled={loading} onClick={() => sendMessage("请开始核验往事：根据我的八字，详细推算过去发生过的10件事（按人生阶段分、写具体），完了先停下来让我核对，有不对的我会告诉你，再给我完整的八字报告。")}>开始核验解读 →</button>
-                    </div>
-                  )}
-                  {selected !== "qimen" && selected !== "liuyao" && selected !== "bazi" && "局已经起好了，直接在下面问吧——比如「我最近工作怎么样」「这段感情能成吗」，也可以接着追问。"}
-                </div>
-              )}
               {messages.map((m, i) => (
                 <div key={i} className={"bubble " + (m.role === "user" ? "me" : "bot")}>
                   {m.img && <img className="bubble-img" src={m.img} alt="用户图片" />}
-                  {m.content && <div className="bubble-body">{m.content}</div>}
+                  {m.content && <div className="bubble-body">{removeAsterisks(m.content)}</div>}
                 </div>
               ))}
               {loading && (
                 <div className="bubble bot">
-                  <div className="bubble-body typing">正在理清局势…</div>
+                  <div className="bubble-body typing">正在理清局势，大约需要1分钟…</div>
                 </div>
               )}
               <div ref={chatEndRef} />
@@ -2688,7 +1947,6 @@ function AppInner() {
 
             {error && <p className="errline">✕ {error}</p>}
 
-            {/* 输入框 */}
             {pendingImage && (
               <div className="img-preview">
                 <img src={pendingImage.dataUrl} alt="待发送" />
@@ -2708,54 +1966,20 @@ function AppInner() {
                     sendMessage();
                   }
                 }}
-                placeholder="描述你的问题…（可发图片让我帮看，回车发送）"
+                placeholder="描述你的问题…（可发图片，回车发送）"
                 rows={2}
               />
-              <button className="send-btn" onClick={sendMessage} disabled={loading || (!input.trim() && !pendingImage)}>发送</button>
+              <button className="send-btn" onClick={() => sendMessage()} disabled={loading || (!input.trim() && !pendingImage)}>发送</button>
             </div>
           </section>
         )}
 
-
-        {/* APPENDIX · 关于本站（仅首页显示） */}
-        {!selected && !learnMode && (
-        <section className="section">
-          <div className="sec-head"><Kicker code="APPENDIX" label="关于本站 · 使用说明" /></div>
-          <details className="acc">
-            <summary><span>关于本站 · 使用说明</span><span className="hint">点击展开</span></summary>
-            <div className="acc-body">
-              <h4>机制 · How it works</h4>
-              <p>「富甲天下」汇集小六壬、八字、奇门遁甲、梅花易数、六爻、塔罗六种问答体系。起局、排盘、成卦全部交由确定性算法在本地精确计算（四柱、奇门定局与值符值使、六爻卦象与世应、梅花卦数与体用等），再由 AI 依传统典籍体系只作文字解读，因此同一局面复算结果稳定，不会每次乱变。</p>
-              <h4>六体系一览 · Six systems</h4>
-              <ul className="sixlist">
-                {SYSTEMS.map((s) => <li key={s.id}><span className="n">{s.name}</span> <span className="s">— {s.sub}</span></li>)}
-              </ul>
-              <h4>准确性说明 · Accuracy</h4>
-              <ul>
-                <li>八字四柱、大运均由农历库按精确节气时刻推算，支持农历/新历输入与闰月；出生时间不确定时，时柱与起运时间只能算个大概，可用「时辰倒推」向导辅助缩小范围，最终仍需自行核实，结果仅供参考。性别未填时会同时列出男命、女命两种大运排法。</li>
-                <li>小六壬的农历月、日、时辰均按当下中国时间自动换算，报数起课时只有「日」由你随口报的数代入，月与时辰仍是真实农历，不会再对不上。六亲、六神、星曜对应为民间通行版本，不同流派/典籍分配略有出入。</li>
-                <li>梅花易数「时间起卦」因未接入精确干支排盘，采阳历干支变体；如需严格古法，请改用数字起卦。</li>
-                <li>六爻讲究「不问不卜」，选定体系后需先说出想问的具体事情，才会摇钱起卦。</li>
-                <li>奇门遁甲的局数、地盘、值符值使已精确计算，其余七星七门按固定序由 AI 补齐；解读会紧扣值符值使、九星八门等盘面元素，而非泛泛而谈。</li>
-                <li>塔罗提供整体运势、感情、事业财运、决策辅助等十余种牌阵，可在下拉框中按需选择。</li>
-                <li>「历史记录」只保存在你这台设备的浏览器本地存储里，不会上传到任何服务器，换设备或清除浏览器数据后不可找回。</li>
-              </ul>
-              <div style={{ marginTop: 16 }}>
-                <Callout tone="verm" label="免责 · Disclaimer">术数推演仅供参考与自省，不构成对具体决策（含投资、医疗、法律、婚姻等）的建议；请勿以此替代专业意见或用于赌博投机。</Callout>
-              </div>
-            </div>
-          </details>
-        </section>
-        )}
-
         <RunBar pos="bot" />
-        <p className="foot-note">术数推演仅供参考与自省，不构成对具体决策（含投资、医疗、法律等）的建议。</p>
       </div>
     </div>
   );
 }
 
-/* ---------------- 错误边界：任何运行时错误都显示提示，而不是整页白屏 ---------------- */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -2767,12 +1991,10 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#151210", color: "#F3E8D2", fontFamily: "system-ui,-apple-system,sans-serif", textAlign: "center" }}>
-          <div style={{ maxWidth: 420 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>☯</div>
-            <h2 style={{ fontSize: 18, margin: "0 0 10px" }}>页面出了点小状况</h2>
-            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#A89377" }}>刷新一下试试。如果反复出现，把下面这行信息发给开发者：</p>
-            <pre style={{ fontSize: 12, background: "#211D18", border: "1px solid #3A3226", borderRadius: 8, padding: "10px 12px", marginTop: 12, whiteSpace: "pre-wrap", textAlign: "left", color: "#D9705F" }}>{this.state.msg}</pre>
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#151210", color: "#F3E8D2" }}>
+          <div>
+            <h2>页面出了点小状况</h2>
+            <pre style={{ color: "#D9705F" }}>{this.state.msg}</pre>
           </div>
         </div>
       );
