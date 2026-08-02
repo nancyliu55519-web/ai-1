@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import * as LunarLib from "lunar-javascript";
 
 // 用农历库把"当前中国时间"换算成农历月、日（避免手填出错）
@@ -1322,6 +1322,21 @@ const DESIGN_CSS = `
 .rb-font button{background:none;border:0;color:var(--ink-sub);font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:5px;cursor:pointer;line-height:1;letter-spacing:0}
 .rb-font button:hover{color:var(--gold-lt)}
 .rb-font button.on{background:var(--gold);color:#1A1510;font-weight:700}
+.rb-account{background:rgba(201,161,90,.1);border:1px solid var(--gold-lt2);color:var(--gold-lt);font-family:var(--mono);font-size:10px;letter-spacing:.04em;padding:5px 10px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap}
+.rb-account:hover{border-color:var(--gold-lt);color:var(--gold)}
+.login-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:80;width:90%;max-width:380px;background:#1B1712;border:1px solid var(--gold-lt2);border-radius:16px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}
+.login-head{display:flex;align-items:center;justify-content:space-between;font-family:var(--serif);font-size:20px;color:var(--gold-lt)}
+.login-sub{font-size:12px;color:var(--ink-sub);line-height:1.7}
+.login-input{background:var(--card3);border:1px solid var(--line2);border-radius:9px;padding:12px 14px;color:var(--ink);font-size:15px;outline:none}
+.login-input:focus{border-color:var(--gold-lt)}
+.login-input:disabled{opacity:.6}
+.login-msg{font-size:12px;color:var(--gold-lt);line-height:1.5}
+.login-btn{background:var(--gold);color:#1A1510;border:0;border-radius:9px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.login-btn:hover{opacity:.9}
+.login-btn:disabled{opacity:.5;cursor:default}
+.login-link{background:none;border:0;color:var(--ink-sub);font-size:12px;cursor:pointer;padding:4px}
+.login-link:hover{color:var(--gold-lt)}
+.login-link:disabled{opacity:.5;cursor:default}
 .runbar.bot{border-top:1px solid var(--line2);padding:14px 0;margin-top:40px}
 .runbar .r{text-align:right}
 .kicker{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-txt)}
@@ -1611,7 +1626,7 @@ function Kicker({ code, label, onDark }) {
   );
 }
 
-function RunBar({ pos, onHistory, fontScale, setFontScale }) {
+function RunBar({ pos, onHistory, fontScale, setFontScale, authUser, onLogin, onLogout }) {
   if (pos === "top") {
     return (
       <div className="runbar top">
@@ -1622,7 +1637,9 @@ function RunBar({ pos, onHistory, fontScale, setFontScale }) {
           富甲天下 · AI 多体系术数问答
         </span>
         <span className="r runbar-r">
-          WB-2026 · 六体 · {YEAR_GZ}年
+          {authUser
+            ? <button className="rb-account" onClick={onLogout} title="点击退出登录">{authUser.email.split("@")[0]} · 退出</button>
+            : <button className="rb-account" onClick={onLogin}>登录 / 注册</button>}
           <span className="rb-font" aria-label="字体大小">
             <button className={fontScale <= 0.9 ? "on" : ""} onClick={() => setFontScale(0.9)}>小</button>
             <button className={fontScale === 1 ? "on" : ""} onClick={() => setFontScale(1)}>中</button>
@@ -1870,7 +1887,86 @@ function AppInner() {
   const [showHistory, setShowHistory] = useState(false); // 左侧历史抽屉
   const [openHistGroups, setOpenHistGroups] = useState({}); // 历史按体系分组的展开状态
   const [fontScale, setFontScale] = useState(1); // 字体大小：0.9小 / 1中 / 1.15大 / 1.3特大
+  // —— 登录 & 云端 ——
+  const [authToken, setAuthToken] = useState(() => { try { return localStorage.getItem("fzt_token") || ""; } catch { return ""; } });
+  const [authUser, setAuthUser] = useState(() => { try { return JSON.parse(localStorage.getItem("fzt_user") || "null"); } catch { return null; } });
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginCode, setLoginCode] = useState("");
+  const [loginStep, setLoginStep] = useState("email"); // email | code
+  const [loginMsg, setLoginMsg] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [codeCountdown, setCodeCountdown] = useState(0);
+  // 启动时若已登录，拉一次云端历史
+  useEffect(() => { if (authToken) loadCloudHistory(authToken); /* eslint-disable-next-line */ }, []);
+  // 验证码倒计时
+  useEffect(() => {
+    if (codeCountdown <= 0) return;
+    const t = setTimeout(() => setCodeCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [codeCountdown]);
   const currentHistoryRef = useRef(null); // 当前这一局对应的历史记录条目（不含最新messages，发消息时再补上）
+
+  // —— 登录相关 ——
+  async function sendLoginCode() {
+    if (!/\S+@\S+\.\S+/.test(loginEmail)) { setLoginMsg("请输入有效的邮箱"); return; }
+    setLoginBusy(true); setLoginMsg("");
+    try {
+      const r = await fetch("/api/auth/send-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: loginEmail }) });
+      const d = await r.json();
+      if (!r.ok) { setLoginMsg(d.error || "发送失败"); }
+      else { setLoginStep("code"); setLoginMsg("验证码已发送，请查收邮箱"); setCodeCountdown(60); }
+    } catch (e) { setLoginMsg("网络错误，请重试"); }
+    setLoginBusy(false);
+  }
+  async function verifyLoginCode() {
+    if (!loginCode.trim()) { setLoginMsg("请输入验证码"); return; }
+    setLoginBusy(true); setLoginMsg("");
+    try {
+      const r = await fetch("/api/auth/verify-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: loginEmail, code: loginCode.trim() }) });
+      const d = await r.json();
+      if (!r.ok) { setLoginMsg(d.error || "验证失败"); }
+      else {
+        try { localStorage.setItem("fzt_token", d.token); localStorage.setItem("fzt_user", JSON.stringify(d.user)); } catch {}
+        setAuthToken(d.token); setAuthUser(d.user);
+        setShowLogin(false); setLoginCode(""); setLoginStep("email"); setLoginMsg("");
+        loadCloudHistory(d.token);
+      }
+    } catch (e) { setLoginMsg("网络错误，请重试"); }
+    setLoginBusy(false);
+  }
+  function logout() {
+    try { localStorage.removeItem("fzt_token"); localStorage.removeItem("fzt_user"); } catch {}
+    setAuthToken(""); setAuthUser(null);
+  }
+  // 拉云端历史，与本地合并（按 updatedAt 取新）
+  async function loadCloudHistory(token) {
+    try {
+      const r = await fetch("/api/chat/history", { headers: { Authorization: "Bearer " + (token || authToken) } });
+      const d = await r.json();
+      if (Array.isArray(d.history) && d.history.length) {
+        setHistoryList((prev) => {
+          const map = {};
+          for (const h of prev) map[h.id] = h;
+          for (const h of d.history) { if (!map[h.id] || (h.updatedAt || 0) >= (map[h.id].updatedAt || 0)) map[h.id] = h; }
+          const merged = Object.values(map).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          saveHistory(merged);
+          return merged;
+        });
+      }
+    } catch (e) {}
+  }
+  // 保存一条到云端（登录时才做，静默）
+  function syncHistoryToCloud(entry) {
+    if (!authToken || !entry || !entry.messages || entry.messages.length === 0) return;
+    try {
+      fetch("/api/chat/history/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + authToken },
+        body: JSON.stringify(entry),
+      }).catch(() => {});
+    } catch (e) {}
+  }
 
   function upsertHistory(entry) {
     let saveResult = null;
@@ -1879,7 +1975,7 @@ function AppInner() {
       const next = idx >= 0 ? [...prev.slice(0, idx), entry, ...prev.slice(idx + 1)] : [entry, ...prev];
       // 一条消息都还没发的空壳不落盘：这样用户中途关标签页/刷新也不会在本地留下僵尸记录
       // （仍然更新内存里的 historyList，本次会话内「历史记录」列表照常能看到这一局）
-      if (entry.messages.length > 0) saveResult = saveHistory(next);
+      if (entry.messages.length > 0) { saveResult = saveHistory(next); syncHistoryToCloud(entry); }
       return next;
     });
     if (saveResult && saveResult.shrunk) {
@@ -1887,6 +1983,9 @@ function AppInner() {
     }
   }
   function deleteHistoryEntry(id) {
+    if (authToken) {
+      try { fetch("/api/chat/history/delete", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + authToken }, body: JSON.stringify({ id }) }).catch(() => {}); } catch {}
+    }
     setHistoryList((prev) => {
       const next = prev.filter((e) => e.id !== id);
       saveHistory(next);
@@ -2568,7 +2667,34 @@ function AppInner() {
             </aside>
           </>
         )}
-        <RunBar pos="top" onHistory={() => setShowHistory(true)} fontScale={fontScale} setFontScale={setFontScale} />
+        <RunBar pos="top" onHistory={() => setShowHistory(true)} fontScale={fontScale} setFontScale={setFontScale} authUser={authUser} onLogin={() => { setShowLogin(true); setLoginStep("email"); setLoginMsg(""); }} onLogout={logout} />
+
+        {/* 登录弹窗 */}
+        {showLogin && (
+          <>
+            <div className="drawer-mask" onClick={() => setShowLogin(false)} />
+            <div className="login-modal">
+              <div className="login-head">
+                <span>登录 / 注册</span>
+                <button className="drawer-x" onClick={() => setShowLogin(false)} aria-label="关闭">✕</button>
+              </div>
+              <div className="login-sub">用邮箱验证码登录，登录后历史记录会存到云端，换设备也能看。首次登录自动注册。</div>
+              <input className="login-input" type="email" placeholder="输入你的邮箱" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} disabled={loginStep === "code"} />
+              {loginStep === "code" && (
+                <input className="login-input" type="text" inputMode="numeric" placeholder="输入6位验证码" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} />
+              )}
+              {loginMsg && <div className="login-msg">{loginMsg}</div>}
+              {loginStep === "email" ? (
+                <button className="login-btn" disabled={loginBusy} onClick={sendLoginCode}>{loginBusy ? "发送中…" : "发送验证码"}</button>
+              ) : (
+                <>
+                  <button className="login-btn" disabled={loginBusy} onClick={verifyLoginCode}>{loginBusy ? "登录中…" : "登录"}</button>
+                  <button className="login-link" disabled={codeCountdown > 0 || loginBusy} onClick={sendLoginCode}>{codeCountdown > 0 ? `${codeCountdown}秒后可重发` : "重新发送验证码"}</button>
+                </>
+              )}
+            </div>
+          </>
+        )}
 
         {/* 首页：未选体系、非学习模式时显示 HERO + 列表 */}
         {!selected && !learnMode && (
@@ -3011,3 +3137,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
