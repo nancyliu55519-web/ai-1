@@ -65,7 +65,7 @@ app.post("/api/auth/send-code", (req, res) => {
   db.run("INSERT INTO email_codes (email, code, expire_at) VALUES (?, ?, ?)", [email.toLowerCase(), code, expireAt], (err) => {
     if (err) return res.status(500).json({ error: "验证码写入失败" });
     const mailOptions = {
-      from: `"富甲天下" <${process.env.SMTP_USER}>`,
+      from: process.env.SMTP_USER,
       to: email,
       subject: "【富甲天下】登录验证码",
       text: `您的登录验证码是：${code}，5分钟内有效。如非本人操作请忽略。`,
