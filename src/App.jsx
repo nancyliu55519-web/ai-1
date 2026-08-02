@@ -1761,7 +1761,7 @@ function ShichenWizard({ calendar, year, month, day, isLeapMonth, gender, groupK
           const dayunPreview = dayun.list.slice(1, 4).map((d) => `${d.ganzhi}(${d.startAge}-${d.endAge}岁)`).join("、");
           return (
             <button key={c.branch} type="button" className="shichen-cand" onClick={() => onConfirmHour(c.branch, c.hour)}>
-              <div className="sc-title">{c.branch}时（约 {String(c.hour).padStart(2, "0")}:00-{String((c.hour + 2) % 24).padStart(2, "0")}:00）</div>
+              <div className="sc-title">{c.branch}时（约 {String((c.hour + 23) % 24).padStart(2, "0")}:00-{String((c.hour + 1) % 24).padStart(2, "0")}:00）</div>
               <div className="sc-line">时柱：<span className="ser">{r.pillars.hour}</span></div>
               <div className="sc-line">大运预览：{dayunPreview}</div>
               <div className="sc-pick">选这个时辰 →</div>
@@ -3137,4 +3137,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
